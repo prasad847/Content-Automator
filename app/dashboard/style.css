@@ -1,0 +1,351 @@
+/* ==========================================================
+   GLOBAL LAYOUT
+========================================================== */
+
+.stApp {
+    background: #FAFAF8;
+}
+
+.main .block-container {
+    max-width: none !important;
+    width: 100% !important;
+    padding-top: 1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-bottom: .75rem !important;
+}
+
+section.main > div {
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+
+/* ==========================================================
+   SIDEBAR
+========================================================== */
+
+section[data-testid="stSidebar"] {
+    background: #FFFFFF;
+    border-right: 1px solid #E8E8E8;
+}
+
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 1rem !important;
+}
+
+[data-testid="stSidebarNav"] a,
+section[data-testid="stSidebar"] nav a {
+
+    font-size:16px !important;
+    font-weight:600 !important;
+
+    padding:14px 16px !important;
+
+    border-radius:10px !important;
+
+    margin-bottom:6px;
+}
+
+[data-testid="stSidebarNav"] a:hover,
+section[data-testid="stSidebar"] nav a:hover {
+
+    background:#F3F2F8 !important;
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"],
+section[data-testid="stSidebar"] nav a[aria-current="page"] {
+
+    background:#ECE9FF !important;
+    color:#5B4FE8 !important;
+}
+
+
+/* ==========================================================
+   CARDS
+========================================================== */
+
+div[data-testid="stVerticalBlockBorderWrapper"]{
+
+    border:1px solid #E5E3DD !important;
+
+    border-radius:12px !important;
+
+    background:white;
+}
+
+
+/* ==========================================================
+   TOP BOXES
+========================================================== */
+
+div[class*="st-key-topbox-"]{
+
+    min-height:150px;
+}
+
+
+/* ==========================================================
+   FILE UPLOADER
+========================================================== */
+
+[data-testid="stFileUploaderDropzone"]{
+
+    min-height:42px !important;
+
+    padding:6px !important;
+}
+
+[data-testid="stFileUploaderDropzoneInstructions"]{
+
+    font-size:12px !important;
+}
+
+
+/* ==========================================================
+   BUTTONS
+========================================================== */
+
+.stButton button{
+
+    border-radius:10px;
+
+    font-size:14px;
+
+    font-weight:600;
+
+    padding:9px 14px;
+
+    border:1px solid #E5E3DD;
+}
+
+.stButton button[kind="primary"]{
+
+    background:#5B4FE8;
+
+    border-color:#5B4FE8;
+
+    color:white;
+}
+
+.stButton button[kind="primary"]:hover{
+
+    background:#4A3FD0;
+
+    border-color:#4A3FD0;
+}
+
+
+/* ==========================================================
+   PLATFORM TABS
+========================================================== */
+
+div[data-testid="stTabs"]{
+
+    width:100%;
+}
+
+div[data-testid="stTabs"] [data-baseweb="tab-list"]{
+
+    width:100%;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    gap:10px;
+
+    border-bottom:1px solid #E5E3DD;
+
+    min-height:64px;
+}
+
+div[data-testid="stTabs"] [data-baseweb="tab-list"] button{
+
+    flex:1;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:17px;
+
+    font-weight:600;
+
+    padding:14px 10px;
+}
+
+div[data-testid="stTabs"] button p{
+
+    margin-left:8px;
+}
+
+div[data-testid="stTabs"] [aria-selected="true"]{
+
+    color:#5B4FE8 !important;
+
+    border-bottom:3px solid #5B4FE8 !important;
+}
+
+
+/* ==========================================================
+   TEXT INPUTS
+========================================================== */
+
+.stTextArea textarea,
+.stTextInput input{
+
+    border-radius:10px;
+
+    border-color:#E5E3DD;
+}
+
+
+/* ==========================================================
+   PLATFORM HEADER
+========================================================== */
+
+.platform-banner{
+
+    padding:12px 18px;
+
+    border-radius:10px;
+
+    margin-bottom:14px;
+
+    font-size:18px;
+
+    font-weight:700;
+}
+
+
+/* ==========================================================
+   POST TITLE
+========================================================== */
+
+.post-title{
+
+    font-size:16px;
+
+    font-weight:700;
+}
+
+.post-version{
+
+    color:#888680;
+
+    font-size:12px;
+}
+
+
+/* ==========================================================
+   STATUS BADGES
+========================================================== */
+
+.badge{
+
+    display:inline-block;
+
+    padding:4px 10px;
+
+    border-radius:7px;
+
+    font-size:12px;
+
+    font-weight:600;
+}
+
+.badge-approved{
+
+    background:#E3F5E9;
+
+    color:#1E7A3E;
+}
+
+.badge-draft{
+
+    background:#F1F1F1;
+
+    color:#666;
+}
+
+.badge-review{
+
+    background:#ECE9FF;
+
+    color:#5B4FE8;
+}
+
+.badge-complete{
+
+    background:#E3F5E9;
+
+    color:#1E7A3E;
+}
+
+
+/* ==========================================================
+   SELECT BUTTON
+========================================================== */
+
+div[class*="st-key-selectbtn"] button{
+
+    font-size:15px !important;
+
+    padding:10px 0 !important;
+
+    border-radius:8px;
+}
+
+
+/* ==========================================================
+   ACTION BUTTONS
+========================================================== */
+
+div[class*="st-key-accept-btn"] button{
+
+    background:#22C55E !important;
+
+    border-color:#22C55E !important;
+
+    color:white !important;
+}
+
+div[class*="st-key-regen-btn"] button{
+
+    background:#7C3AED !important;
+
+    border-color:#7C3AED !important;
+
+    color:white !important;
+}
+
+div[class*="st-key-edit-btn"] button{
+
+    background:#2563EB !important;
+
+    border-color:#2563EB !important;
+
+    color:white !important;
+}
+
+div[class*="st-key-pdf-download-btn"] button{
+
+    background:#1F2937 !important;
+
+    border-color:#1F2937 !important;
+
+    color:white !important;
+
+    border-radius:10px;
+
+    font-weight:600;
+}
+
+div[class*="st-key-pdf-download-btn"] button:hover{
+
+    background:#111827 !important;
+
+    border-color:#111827 !important;
+}

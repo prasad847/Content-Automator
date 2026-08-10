@@ -1,0 +1,44 @@
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE / editor
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+
+# Build files
+dist/
+build/
+
+app/google_drive_credentials.json
+
+# Local audio/test files
+app/sample-*.mp3
+app/samplespeech.mp3
+app/uploaded_audio/
