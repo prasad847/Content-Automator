@@ -15,6 +15,7 @@ pages = [
     st.Page("pages/1_Scheduled_Posts.py", title="Scheduled Posts", icon="📅"),
     st.Page("pages/2_Analytics.py", title="Analytics", icon="📊"),
     st.Page("pages/3_Logs.py", title="Logs", icon="📋"),
+    st.Page("pages/4_Connections.py", title="Connections", icon="🔗"),
 ]
 
 nav = st.navigation(pages)

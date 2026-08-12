@@ -55,16 +55,31 @@ def get_pages(access_token):
 
     return response.json()
 
-def publish_post(page_id, page_access_token, message):
+def publish_post(page_id, page_access_token, message, image_path=None):
 
-    url = f"https://graph.facebook.com/v23.0/{page_id}/feed"
+    if image_path:
+        url = f"https://graph.facebook.com/v23.0/{page_id}/photos"
 
-    response = requests.post(
-        url,
-        data={
-            "message": message,
-            "access_token": page_access_token
-        }
-    )
+        with open(image_path, "rb") as image_file:
+            response = requests.post(
+                url,
+                data={
+                    "caption": message,
+                    "access_token": page_access_token
+                },
+                files={
+                    "source": image_file
+                }
+            )
+    else:
+        url = f"https://graph.facebook.com/v23.0/{page_id}/feed"
+
+        response = requests.post(
+            url,
+            data={
+                "message": message,
+                "access_token": page_access_token
+            }
+        )
 
     return response.json()

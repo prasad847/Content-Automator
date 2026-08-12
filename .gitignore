@@ -42,3 +42,8 @@ app/google_drive_credentials.json
 app/sample-*.mp3
 app/samplespeech.mp3
 app/uploaded_audio/
+app/Porsche+Macan+July+5+2018+(1).mp3
+app/processed_files.json
+
+# Generated images
+app/generated_images/

@@ -1,6 +1,7 @@
 import json
+from datetime import datetime
 from sqlalchemy.orm import sessionmaker
-from models import engine, Job, Transcript, ContentItem, Log
+from models import engine, Job, Transcript, ContentItem, Connection, Log
 
 Session = sessionmaker(bind=engine)
 
@@ -297,5 +298,39 @@ def update_publish_flags(item_id, include_text, include_hook, include_image):
     item.publish_include_text = include_text
     item.publish_include_hook = include_hook
     item.publish_include_image = include_image
+    session.commit()
+    session.close()
+
+
+def mark_content_item_published(item_id):
+    """Mark a content item as published, recording when it happened."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.status = "published"
+    item.published_at = datetime.utcnow()
+    session.commit()
+    session.close()
+
+
+def get_connection(platform):
+    """Return the saved connection for a platform (e.g. 'facebook'), or None if not connected."""
+    session = Session()
+    connection = session.query(Connection).filter(Connection.platform == platform).first()
+    session.close()
+    return connection
+
+
+def save_connection(platform, page_id, access_token):
+    """Create or update the saved connection for a platform."""
+    session = Session()
+    connection = session.query(Connection).filter(Connection.platform == platform).first()
+
+    if connection:
+        connection.page_id = page_id
+        connection.access_token = access_token
+    else:
+        connection = Connection(platform=platform, page_id=page_id, access_token=access_token)
+        session.add(connection)
+
     session.commit()
     session.close()

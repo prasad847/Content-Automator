@@ -19,6 +19,7 @@ from services.content_service import (
 )
 from services.image_service import generate_image
 from services.pdf_service import generate_approved_content_pdf
+from services.publisher_service import publish_facebook_item
 from db import (
     get_all_jobs, get_transcript_text, get_content_items,
     update_content_item_status, update_content_item_text,
@@ -381,6 +382,15 @@ def render_staged_detail(item, content_type, data):
         if item.image_path:
             st.image(item.image_path, width=280)
         st.success("All stages approved — set the schedule on the right.")
+
+        if content_type == "facebook_post" and item.status == "approved":
+            if st.button("🚀 Publish now", key=f"publish_now_{item.id}"):
+                try:
+                    post_url = publish_facebook_item(item)
+                    st.success(f"Published to Facebook — [view post]({post_url})")
+                except Exception as e:
+                    st.error(f"Publish failed: {e}")
+                st.rerun()
 
 
 def render_simple_detail(item, content_type, data):
