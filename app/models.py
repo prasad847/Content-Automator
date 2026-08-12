@@ -1,5 +1,11 @@
 # Manual migration for existing databases (run once in pgAdmin):
 # ALTER TABLE content_items ADD COLUMN published_at TIMESTAMP;
+# ALTER TABLE content_items ADD COLUMN hook_version INTEGER DEFAULT 1;
+# ALTER TABLE content_items ADD COLUMN image_version INTEGER DEFAULT 1;
+# ALTER TABLE content_items ADD COLUMN hook_on_image BOOLEAN DEFAULT FALSE;
+# ALTER TABLE content_items ADD COLUMN final_image_path TEXT;
+# ALTER TABLE content_items ADD COLUMN final_status VARCHAR DEFAULT 'draft';
+# ALTER TABLE content_items ADD COLUMN error_message TEXT;
 # The new `connections` table is picked up automatically the next time
 # `python models.py` is run (init_db uses create_all, which only creates
 # tables that don't exist yet — it never alters existing ones).
@@ -60,8 +66,14 @@ class ContentItem(Base):
     stage = Column(String, default="post")  # post, hook, image, complete
     hook_content = Column(Text, nullable=True)
     hook_status = Column(String, default="draft")  # draft, approved
+    hook_version = Column(Integer, default=0)  # bumps each time a hook is (re)generated
     image_path = Column(Text, nullable=True)
     image_status = Column(String, default="draft")  # draft, approved
+    image_version = Column(Integer, default=0)  # bumps each time an image is (re)generated
+    hook_on_image = Column(Boolean, default=False)  # whether the hook text is composited onto the image
+    final_image_path = Column(Text, nullable=True)  # image with hook text burned in, when hook_on_image is True
+    final_status = Column(String, default="draft")  # draft, final_approved, published, failed
+    error_message = Column(Text, nullable=True)  # last publish error, if any
     publish_include_text = Column(Boolean, default=True)
     publish_include_hook = Column(Boolean, default=False)
     publish_include_image = Column(Boolean, default=False)

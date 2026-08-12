@@ -252,11 +252,16 @@ def approve_post_and_advance(item_id):
 
 
 def save_hook(item_id, hook_text):
-    """Save a freshly generated hook, in draft status."""
+    """Save a freshly generated/regenerated hook, in draft status. Bumps hook_version and
+    invalidates any existing hook+image composition and final approval, since the hook changed."""
     session = Session()
     item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
     item.hook_content = hook_text
     item.hook_status = "draft"
+    item.hook_version = (item.hook_version or 0) + 1
+    item.hook_on_image = False
+    item.final_image_path = None
+    item.final_status = "draft"
     session.commit()
     session.close()
 
@@ -272,11 +277,17 @@ def approve_hook_and_advance(item_id):
 
 
 def save_image(item_id, image_path):
-    """Save a freshly generated image's file path, in draft status."""
+    """Save a freshly generated/regenerated image's file path, in draft status. Bumps
+    image_version and invalidates any existing hook+image composition and final approval,
+    since the base image changed."""
     session = Session()
     item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
     item.image_path = image_path
     item.image_status = "draft"
+    item.image_version = (item.image_version or 0) + 1
+    item.hook_on_image = False
+    item.final_image_path = None
+    item.final_status = "draft"
     session.commit()
     session.close()
 
@@ -287,6 +298,38 @@ def approve_image_and_complete(item_id):
     item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
     item.image_status = "approved"
     item.stage = "complete"
+    session.commit()
+    session.close()
+
+
+def save_final_composition(item_id, final_image_path, hook_on_image):
+    """Save (or clear) the hook-on-image composited result. Clears any prior final approval,
+    since the final visual changed."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.final_image_path = final_image_path
+    item.hook_on_image = hook_on_image
+    item.final_status = "draft"
+    session.commit()
+    session.close()
+
+
+def approve_final(item_id):
+    """Mark the final hook+image+post combination as approved, ready to publish."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.final_status = "final_approved"
+    item.error_message = None
+    session.commit()
+    session.close()
+
+
+def mark_content_item_failed(item_id, error_message):
+    """Record a publish failure without losing the approved content."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.final_status = "failed"
+    item.error_message = error_message
     session.commit()
     session.close()
 
@@ -307,6 +350,7 @@ def mark_content_item_published(item_id):
     session = Session()
     item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
     item.status = "published"
+    item.final_status = "published"
     item.published_at = datetime.utcnow()
     session.commit()
     session.close()

@@ -18,6 +18,7 @@ from services.content_service import (
     generate_news_article, generate_reel_ideas, generate_youtube_ideas
 )
 from services.image_service import generate_image
+from services.image_compose_service import compose_hook_on_image
 from services.pdf_service import generate_approved_content_pdf
 from services.publisher_service import publish_facebook_item
 from db import (
@@ -26,6 +27,7 @@ from db import (
     update_content_item_schedule, regenerate_content_item, get_approved_items,
     approve_post_and_advance, save_hook, approve_hook_and_advance,
     save_image, approve_image_and_complete, update_publish_flags,
+    save_final_composition, approve_final, mark_content_item_failed,
     create_job, save_transcript, save_content_items, update_job_status, log_event
 )
 
@@ -333,10 +335,17 @@ def render_staged_detail(item, content_type, data):
         if not item.hook_content:
             if st.button("Generate hook", key=f"gen_hook_{item.id}"):
                 with st.spinner("Generating hook..."):
-                    hook_text = generate_hook(data.get("text", ""))
-                    save_hook(item.id, hook_text)
+                    try:
+                        hook_text = generate_hook(data.get("text", ""))
+                        save_hook(item.id, hook_text)
+                    except Exception as e:
+                        st.error("Hook generation failed. Try again.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
+                        st.stop()
                 st.rerun()
         else:
+            st.caption(f"Version {item.hook_version}")
             render_accept_regenerate_edit(
                 item_id=f"hook_{item.id}",
                 current_value=item.hook_content,
@@ -346,51 +355,204 @@ def render_staged_detail(item, content_type, data):
                 height=60, area_label="Hook"
             )
 
+            hook_instructions = st.text_area(
+                "Instructions for hook regeneration",
+                placeholder="Tell the AI what you want changed. Example: Make it more emotional, "
+                            "shorter, more curiosity-driven, or professional.",
+                key=f"hook_instructions_{item.id}", height=70
+            )
+            if st.button("Regenerate with Instructions", key=f"regen_hook_instr_{item.id}"):
+                with st.spinner("Regenerating hook..."):
+                    try:
+                        new_hook = generate_hook(data.get("text", ""), instructions=hook_instructions,
+                                                  previous_hook=item.hook_content)
+                        save_hook(item.id, new_hook)
+                    except Exception as e:
+                        st.error("Hook generation failed. Try again.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
+                        st.stop()
+                st.rerun()
+
     elif item.stage == "image":
         st.text_area("Approved post", value=data.get("text", ""), height=80, disabled=True, key=f"locked_text_{item.id}")
         st.text_area("Approved hook", value=item.hook_content or "", height=50, disabled=True, key=f"locked_hook_{item.id}")
 
-        image_feedback = st.text_area("Image instructions (optional)",
-                                       placeholder="e.g. 'bright colors, minimalist style'",
-                                       key=f"img_feedback_{item.id}", height=70)
-
         if not item.image_path:
             if st.button("Generate image", key=f"gen_img_{item.id}"):
                 with st.spinner("Generating image..."):
-                    image_path = generate_image(data.get("text", ""), item.hook_content, image_feedback)
-                    save_image(item.id, image_path)
+                    try:
+                        image_path = generate_image(data.get("text", ""), item.hook_content)
+                        save_image(item.id, image_path)
+                    except Exception as e:
+                        st.error("Image generation failed. Try again or modify your instructions.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
+                        st.stop()
                 st.rerun()
         else:
+            st.caption(f"Version {item.image_version}")
             st.image(item.image_path, width=280)
             c1, c2 = st.columns(2)
             with c1:
                 with st.container(key=f"regen-btn-img-{item.id}"):
                     if st.button("Regenerate", key=f"regen_img_{item.id}", use_container_width=True):
                         with st.spinner("Regenerating image..."):
-                            image_path = generate_image(data.get("text", ""), item.hook_content, image_feedback)
-                            save_image(item.id, image_path)
+                            try:
+                                image_path = generate_image(data.get("text", ""), item.hook_content)
+                                save_image(item.id, image_path)
+                            except Exception as e:
+                                st.error("Image generation failed. Try again or modify your instructions.")
+                                with st.expander("Technical details"):
+                                    st.code(str(e))
+                                st.stop()
                         st.rerun()
             with c2:
                 with st.container(key=f"accept-btn-img-{item.id}"):
-                    if st.button("Accept", key=f"approve_img_{item.id}", use_container_width=True):
+                    if st.button("Accept Image", key=f"approve_img_{item.id}", use_container_width=True):
                         approve_image_and_complete(item.id)
                         st.rerun()
+
+            image_instructions = st.text_area(
+                "Instructions for image regeneration",
+                placeholder="Tell the AI what you want changed. Example: Make it more professional, "
+                            "use a darker background, show a person working on a laptop, remove "
+                            "unnecessary objects, make it more realistic.",
+                key=f"img_instructions_{item.id}", height=70
+            )
+            if st.button("Regenerate with Instructions", key=f"regen_img_instr_{item.id}"):
+                with st.spinner("Regenerating image..."):
+                    try:
+                        image_path = generate_image(data.get("text", ""), item.hook_content, image_instructions)
+                        save_image(item.id, image_path)
+                    except Exception as e:
+                        st.error("Image generation failed. Try again or modify your instructions.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
+                        st.stop()
+                st.rerun()
 
     elif item.stage == "complete":
         st.text_area("Final post", value=data.get("text", ""), height=80, disabled=True, key=f"final_text_{item.id}")
         st.text_area("Final hook", value=item.hook_content or "", height=50, disabled=True, key=f"final_hook_{item.id}")
-        if item.image_path:
-            st.image(item.image_path, width=280)
-        st.success("All stages approved — set the schedule on the right.")
+        st.success("Hook and image both approved.")
 
-        if content_type == "facebook_post" and item.status == "approved":
-            if st.button("🚀 Publish now", key=f"publish_now_{item.id}"):
-                try:
-                    post_url = publish_facebook_item(item)
-                    st.success(f"Published to Facebook — [view post]({post_url})")
-                except Exception as e:
-                    st.error(f"Publish failed: {e}")
+        st.divider()
+        st.markdown("#### Publish with")
+
+        publish_mode = st.radio(
+            "Choose how the post should look on Facebook",
+            ["Post + Hook on Image", "Post + Image"],
+            index=0 if item.hook_on_image else 1,
+            key=f"publish_mode_{item.id}"
+        )
+        want_hook_on_image = publish_mode == "Post + Hook on Image"
+
+        if want_hook_on_image != item.hook_on_image:
+            save_final_composition(item.id, item.final_image_path, want_hook_on_image)
+            st.rerun()
+
+        if want_hook_on_image:
+            if item.final_image_path:
+                st.markdown("**Preview: hook on image**")
+                st.image(item.final_image_path, width=320)
+            else:
+                st.info("Not composed yet. Generate a preview of the hook placed on the image below.")
+                if item.image_path:
+                    st.image(item.image_path, width=320)
+
+            compose_instructions = st.text_area(
+                "Instructions for hook + image",
+                placeholder="Put the hook at the top, use large bold text, keep the person visible, "
+                            "use a clean professional layout.",
+                key=f"compose_instructions_{item.id}", height=70
+            )
+            if st.button("Generate Hook + Image", key=f"compose_btn_{item.id}"):
+                with st.spinner("Placing hook on image..."):
+                    try:
+                        composed_path = compose_hook_on_image(item.image_path, item.hook_content, compose_instructions)
+                        save_final_composition(item.id, composed_path, True)
+                    except Exception as e:
+                        st.error("Could not place the hook on the image. Try again or adjust your instructions.")
+                        with st.expander("Technical details"):
+                            st.code(str(e))
+                        st.stop()
                 st.rerun()
+        else:
+            st.markdown("**Preview: image only**")
+            if item.image_path:
+                st.image(item.image_path, width=320)
+
+        st.divider()
+        st.markdown("#### Final Approval")
+        st.markdown(f"**Hook:** {item.hook_content or '(none)'}")
+        st.markdown(f"**Post:** {data.get('text', '')}")
+
+        publish_image = item.final_image_path if (want_hook_on_image and item.final_image_path) else item.image_path
+        publish_blocked = want_hook_on_image and not item.final_image_path
+
+        if item.final_status == "published":
+            st.success("✅ Successfully published to Facebook.")
+        else:
+            st.caption("Clicking Approve & Publish is your explicit approval of this final version.")
+
+            pc1, pc2, pc3 = st.columns(3)
+            with pc1:
+                if content_type == "facebook_post":
+                    if st.button("🚀 Approve & Publish to Facebook", key=f"publish_now_{item.id}",
+                                 type="primary", disabled=publish_blocked):
+                        with st.spinner("Publishing to Facebook..."):
+                            approve_final(item.id)
+                            # Hook text is never duplicated as a separate caption - it's either
+                            # burned into the image (hook-on-image mode) or left off entirely.
+                            update_publish_flags(item.id, True, False, bool(publish_image))
+                            # item is the in-memory object loaded before this click; update_publish_flags
+                            # wrote to the DB via its own session, so mirror those flags here too or
+                            # publish_facebook_item would read the stale pre-click values off `item`.
+                            item.publish_include_text = True
+                            item.publish_include_hook = False
+                            item.publish_include_image = bool(publish_image)
+                            item.hook_on_image = want_hook_on_image
+                            try:
+                                post_url = publish_facebook_item(item)
+                                st.success("Successfully published to Facebook.")
+                                st.markdown(f"[View post]({post_url})")
+                            except Exception as e:
+                                mark_content_item_failed(item.id, str(e))
+                                st.error("Facebook publishing failed.")
+                                with st.expander("Technical details"):
+                                    st.code(str(e))
+                        st.rerun()
+                    if publish_blocked:
+                        st.caption("Generate the hook + image preview above first.")
+            with pc2:
+                if st.button("Regenerate Hook", key=f"final_regen_hook_{item.id}"):
+                    with st.spinner("Regenerating hook..."):
+                        try:
+                            new_hook = generate_hook(data.get("text", ""), previous_hook=item.hook_content)
+                            save_hook(item.id, new_hook)
+                        except Exception as e:
+                            st.error("Hook generation failed. Try again.")
+                            with st.expander("Technical details"):
+                                st.code(str(e))
+                            st.stop()
+                    st.rerun()
+            with pc3:
+                if st.button("Regenerate Image", key=f"final_regen_img_{item.id}"):
+                    with st.spinner("Regenerating image..."):
+                        try:
+                            new_image = generate_image(data.get("text", ""), item.hook_content)
+                            save_image(item.id, new_image)
+                        except Exception as e:
+                            st.error("Image generation failed. Try again or modify your instructions.")
+                            with st.expander("Technical details"):
+                                st.code(str(e))
+                            st.stop()
+                    st.rerun()
+
+            if item.final_status == "failed" and item.error_message:
+                with st.expander("Last publish error"):
+                    st.code(item.error_message)
 
 
 def render_simple_detail(item, content_type, data):

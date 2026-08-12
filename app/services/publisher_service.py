@@ -29,7 +29,9 @@ def publish_facebook_item(item):
             message += data.get("text", "")
         message = message.strip()
 
-        image_path = item.image_path if (item.publish_include_image and item.image_path) else None
+        image_path = None
+        if item.publish_include_image:
+            image_path = item.final_image_path if (item.hook_on_image and item.final_image_path) else item.image_path
 
         result = post_to_facebook(message, image_path)
         post_url = f"https://www.facebook.com/{result}"
