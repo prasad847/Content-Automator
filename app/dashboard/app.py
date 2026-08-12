@@ -28,7 +28,8 @@ from db import (
     approve_post_and_advance, save_hook, approve_hook_and_advance,
     save_image, approve_image_and_complete, update_publish_flags,
     save_final_composition, approve_final, mark_content_item_failed,
-    create_job, save_transcript, save_content_items, update_job_status, log_event
+    create_job, save_transcript, save_content_items, update_job_status, log_event,
+    reset_and_regenerate_item
 )
 
 css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.css")
@@ -238,13 +239,16 @@ def render_tab(content_type, items):
 
     list_col, detail_col, schedule_col = st.columns([0.9, 3.4, 1.1],gap="medium")
 
+    # Tracked by item_index (stable across regeneration) rather than item.id, because
+    # regenerate_content_item() deletes the old row and inserts a new one with a new id -
+    # tracking by id would silently snap the selection back to Post 1 on every regenerate.
     selection_key = f"selected_item_{content_type}"
     if selection_key not in st.session_state:
-        st.session_state[selection_key] = items[0].id
+        st.session_state[selection_key] = items[0].item_index
 
     with list_col:
         for item in items:
-            is_selected = st.session_state[selection_key] == item.id
+            is_selected = st.session_state[selection_key] == item.item_index
             with st.container(border=True):
                 status_kind = "approved" if item.status == "approved" else "draft"
                 if content_type in STAGED_TYPES and item.stage == "complete":
@@ -260,10 +264,10 @@ def render_tab(content_type, items):
                 with st.container(key=f"selectbtn-wrap-{item.id}"):
                     if st.button("Select", key=f"pick_{item.id}", type="primary" if is_selected else "secondary",
                                  use_container_width=True):
-                        st.session_state[selection_key] = item.id
+                        st.session_state[selection_key] = item.item_index
                         st.rerun()
 
-    selected_item = next((i for i in items if i.id == st.session_state[selection_key]), items[0])
+    selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
     data = json.loads(selected_item.content)
 
     with detail_col:
@@ -317,6 +321,31 @@ def render_tab(content_type, items):
 
 
 def render_staged_detail(item, content_type, data):
+    reset_confirm_key = f"confirm_reset_{item.id}"
+    if st.session_state.get(reset_confirm_key):
+        st.warning(
+            "This discards this post's current text, hook, and image, and generates a "
+            "brand new post in its place. This cannot be undone. Continue?"
+        )
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            if st.button("Yes, reset this post", key=f"reset_yes_{item.id}", type="primary", use_container_width=True):
+                with st.spinner("Generating a new post..."):
+                    new_content = regenerate_single_item(content_type, transcript_text)
+                    reset_and_regenerate_item(item.id, new_content)
+                st.session_state[reset_confirm_key] = False
+                st.rerun()
+        with rc2:
+            if st.button("Cancel", key=f"reset_cancel_{item.id}", use_container_width=True):
+                st.session_state[reset_confirm_key] = False
+                st.rerun()
+    else:
+        with st.container(key=f"reset-btn-wrap-{item.id}"):
+            if st.button("🔄 Reset Post", key=f"reset_btn_{item.id}"):
+                st.session_state[reset_confirm_key] = True
+                st.rerun()
+    st.divider()
+
     if item.stage == "post":
         render_accept_regenerate_edit(
             item_id=f"post_{item.id}",
@@ -413,12 +442,21 @@ def render_staged_detail(item, content_type, data):
                         approve_image_and_complete(item.id)
                         st.rerun()
 
+            img_instructions_key = f"img_instructions_{item.id}"
+            img_instructions_reset_key = f"{img_instructions_key}_reset"
+            # Widget values can't be written after the widget's been instantiated this run,
+            # so a pending clear from the previous run is applied here, before the text_area
+            # below is created.
+            if st.session_state.get(img_instructions_reset_key):
+                st.session_state[img_instructions_key] = ""
+                st.session_state[img_instructions_reset_key] = False
+
             image_instructions = st.text_area(
                 "Instructions for image regeneration",
                 placeholder="Tell the AI what you want changed. Example: Make it more professional, "
                             "use a darker background, show a person working on a laptop, remove "
                             "unnecessary objects, make it more realistic.",
-                key=f"img_instructions_{item.id}", height=70
+                key=img_instructions_key, height=70
             )
             if st.button("Regenerate with Instructions", key=f"regen_img_instr_{item.id}"):
                 with st.spinner("Regenerating image..."):
@@ -430,6 +468,7 @@ def render_staged_detail(item, content_type, data):
                         with st.expander("Technical details"):
                             st.code(str(e))
                         st.stop()
+                st.session_state[img_instructions_reset_key] = True
                 st.rerun()
 
     elif item.stage == "complete":

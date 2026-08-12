@@ -172,6 +172,35 @@ def regenerate_content_item(old_item_id, new_content_dict):
     session.close()
 
 
+def reset_and_regenerate_item(old_item_id, new_content_dict):
+    """Fully discard a post - its text, hook, image, and all generation state - and replace
+    it with a brand new draft, exactly as if it had just been generated for the first time.
+    The old row is deleted; the new row starts at version 1, stage 'post', with every
+    hook/image/final field back at its column default."""
+    session = Session()
+
+    old_item = session.query(ContentItem).filter(ContentItem.id == old_item_id).first()
+    job_id = old_item.job_id
+    content_type = old_item.content_type
+    item_index = old_item.item_index
+
+    session.delete(old_item)
+
+    new_item = ContentItem(
+        job_id=job_id,
+        content_type=content_type,
+        item_index=item_index,
+        content=json.dumps(new_content_dict),
+        version=1,
+        status="draft",
+        is_final=True,
+        stage="post",
+    )
+    session.add(new_item)
+    session.commit()
+    session.close()
+
+
 def get_approved_items(job_id):
     """Return all approved content items for a job, current versions only."""
     session = Session()
