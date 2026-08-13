@@ -556,48 +556,50 @@ def render_staged_detail(item, content_type, data):
             if schedule_open_key not in st.session_state:
                 st.session_state[schedule_open_key] = False
 
-            if content_type == "facebook_post":
-                with st.container(key=f"pillbtn-publish-{item.id}"):
-                    if st.button("📘  Approve & Publish to Facebook", key=f"publish_now_{item.id}",
+            pc1, pc2, pc3 = st.columns(3)
+            with pc1:
+                if content_type == "facebook_post":
+                    with st.container(key=f"pillbtn-publish-{item.id}"):
+                        if st.button("📘  Approve & Publish to Facebook", key=f"publish_now_{item.id}",
+                                     disabled=publish_blocked, use_container_width=True):
+                            with st.spinner("Publishing to Facebook..."):
+                                approve_final(item.id)
+                                # Hook text is never duplicated as a separate caption - it's either
+                                # burned into the image (hook-on-image mode) or left off entirely.
+                                update_publish_flags(item.id, True, False, bool(publish_image))
+                                # item is the in-memory object loaded before this click; update_publish_flags
+                                # wrote to the DB via its own session, so mirror those flags here too or
+                                # publish_facebook_item would read the stale pre-click values off `item`.
+                                item.publish_include_text = True
+                                item.publish_include_hook = False
+                                item.publish_include_image = bool(publish_image)
+                                item.hook_on_image = want_hook_on_image
+                                try:
+                                    post_url = publish_facebook_item(item)
+                                    st.success("Successfully published to Facebook.")
+                                    st.markdown(f"[View post]({post_url})")
+                                except Exception as e:
+                                    mark_content_item_failed(item.id, str(e))
+                                    st.error("Facebook publishing failed.")
+                                    with st.expander("Technical details"):
+                                        st.code(str(e))
+                            st.rerun()
+                    if publish_blocked:
+                        st.caption("Generate the hook + image preview above first.")
+            with pc2:
+                with st.container(key=f"pillbtn-schedule-{item.id}"):
+                    if st.button("✅  Approve & Schedule Date & Time", key=f"schedule_toggle_{item.id}",
                                  disabled=publish_blocked, use_container_width=True):
-                        with st.spinner("Publishing to Facebook..."):
-                            approve_final(item.id)
-                            # Hook text is never duplicated as a separate caption - it's either
-                            # burned into the image (hook-on-image mode) or left off entirely.
-                            update_publish_flags(item.id, True, False, bool(publish_image))
-                            # item is the in-memory object loaded before this click; update_publish_flags
-                            # wrote to the DB via its own session, so mirror those flags here too or
-                            # publish_facebook_item would read the stale pre-click values off `item`.
-                            item.publish_include_text = True
-                            item.publish_include_hook = False
-                            item.publish_include_image = bool(publish_image)
-                            item.hook_on_image = want_hook_on_image
-                            try:
-                                post_url = publish_facebook_item(item)
-                                st.success("Successfully published to Facebook.")
-                                st.markdown(f"[View post]({post_url})")
-                            except Exception as e:
-                                mark_content_item_failed(item.id, str(e))
-                                st.error("Facebook publishing failed.")
-                                with st.expander("Technical details"):
-                                    st.code(str(e))
+                        st.session_state[schedule_open_key] = not st.session_state[schedule_open_key]
                         st.rerun()
                 if publish_blocked:
                     st.caption("Generate the hook + image preview above first.")
-
-            with st.container(key=f"pillbtn-schedule-{item.id}"):
-                if st.button("✅  Approve & Schedule Date & Time", key=f"schedule_toggle_{item.id}",
-                             disabled=publish_blocked, use_container_width=True):
-                    st.session_state[schedule_open_key] = not st.session_state[schedule_open_key]
-                    st.rerun()
-            if publish_blocked:
-                st.caption("Generate the hook + image preview above first.")
-
-            with st.container(key=f"pillbtn-group-{item.id}"):
-                # Placeholder only - group scheduling isn't implemented yet.
-                if st.button("🗓️  Schedule in Group (Coming Soon)", key=f"schedule_group_{item.id}",
-                             use_container_width=True):
-                    st.info("Scheduling in a group is coming soon.")
+            with pc3:
+                with st.container(key=f"pillbtn-group-{item.id}"):
+                    # Placeholder only - group scheduling isn't implemented yet.
+                    if st.button("🗓️  Schedule in Group (Coming Soon)", key=f"schedule_group_{item.id}",
+                                 use_container_width=True):
+                        st.info("Scheduling in a group is coming soon.")
 
             if st.session_state[schedule_open_key]:
                 st.markdown("###### Choose when to publish")

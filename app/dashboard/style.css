@@ -516,24 +516,20 @@ div[class*="st-key-fb-pdf-download-btn"] button:hover:not(:disabled){
    FINAL APPROVAL - STACKED PILL BUTTONS
 ========================================================== */
 
-div[class*="st-key-pillbtn-"]{
-    margin-bottom: 10px;
-}
-
 div[class*="st-key-pillbtn-"] button{
     border-radius: var(--radius-pill) !important;
-    padding: 14px 22px !important;
+    padding: 14px 18px !important;
     font-size: 15px !important;
     font-weight: 700 !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
+    text-align: center !important;
+    justify-content: center !important;
     border: none !important;
     box-shadow: var(--shadow-sm);
     transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 div[class*="st-key-pillbtn-"] button p{
-    text-align: left !important;
+    text-align: center !important;
 }
 
 div[class*="st-key-pillbtn-"] button:active:not(:disabled){
