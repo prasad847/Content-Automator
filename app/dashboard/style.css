@@ -209,10 +209,14 @@ div[class*="st-key-topbox-"] > div{
     cursor: not-allowed;
 }
 
+.stButton button[kind="primary"],
+.stButton button[kind="primary"] *{
+    color: white !important;
+}
+
 .stButton button[kind="primary"]{
     background: var(--brand);
     border-color: var(--brand);
-    color: white;
 }
 
 .stButton button[kind="primary"]:hover:not(:disabled){
@@ -233,40 +237,62 @@ div[class*="st-key-topbox-"] > div{
 ========================================================== */
 
 div[data-testid="stTabs"]{
-    width: 100%;
+    width: 100% !important;
 }
 
-div[data-testid="stTabs"] [data-baseweb="tab-list"]{
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    border-bottom: 1px solid var(--border);
-    min-height: 60px;
+div[data-testid="stTabs"] div[data-orientation="horizontal"]{
+    width: 100% !important;
 }
 
-div[data-testid="stTabs"] [data-baseweb="tab-list"] button{
-    flex: 1;
+div[data-testid="stTabs"] div[role="tablist"]{
+    width: 100% !important;
+    display: flex !important;
+    justify-content: stretch !important;
+    gap: 6px;
+    border-bottom: 2px solid var(--border);
+    min-height: 66px;
+}
+
+div[data-testid="stTabs"] div[data-testid="stTab"]{
+    flex: 1 1 0% !important;
+    display: flex !important;
     justify-content: center;
     align-items: center;
-    font-size: 16px;
-    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    padding: 16px 12px;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: color 0.15s ease, background 0.15s ease;
+    border-bottom: 3px solid transparent;
+}
+
+div[data-testid="stTabs"] div[data-testid="stTab"] p{
+    font-size: 17px !important;
+    font-weight: 700 !important;
     color: var(--text-muted);
-    padding: 12px 10px;
+    white-space: nowrap;
     transition: color 0.15s ease;
 }
 
-div[data-testid="stTabs"] [data-baseweb="tab-list"] button:hover{
-    color: var(--text);
+div[data-testid="stTabs"] div[data-testid="stTab"]:hover{
+    background: var(--brand-tint);
 }
 
-div[data-testid="stTabs"] button p{
-    margin-left: 8px;
+div[data-testid="stTabs"] div[data-testid="stTab"]:hover p{
+    color: var(--brand);
 }
 
-div[data-testid="stTabs"] [aria-selected="true"]{
-    color: var(--brand) !important;
+div[data-testid="stTabs"] div[data-testid="stTab"][aria-selected="true"]{
+    background: var(--brand-tint);
     border-bottom: 3px solid var(--brand) !important;
+}
+
+div[data-testid="stTabs"] div[data-testid="stTab"][aria-selected="true"] p{
+    color: var(--brand) !important;
+}
+
+div[data-testid="stTabs"] .react-aria-SelectionIndicator{
+    display: none;
 }
 
 
@@ -409,10 +435,18 @@ div[class*="st-key-selectbtn"] button{
    ACTION BUTTONS
 ========================================================== */
 
+/* Every colored action button also forces color on its nested markdown
+   wrapper (Streamlit renders button labels as <div><p>label</p></div>
+   inside the <button>), because that inner <p> would otherwise pick up
+   the global dark text color and become unreadable on a dark background. */
+
+div[class*="st-key-accept-btn"] button,
+div[class*="st-key-accept-btn"] button *{
+    color: white !important;
+}
 div[class*="st-key-accept-btn"] button{
     background: var(--green) !important;
     border-color: var(--green) !important;
-    color: white !important;
 }
 div[class*="st-key-accept-btn"] button:hover:not(:disabled){
     background: var(--green-hover) !important;
@@ -420,10 +454,13 @@ div[class*="st-key-accept-btn"] button:hover:not(:disabled){
     box-shadow: var(--shadow-md);
 }
 
+div[class*="st-key-regen-btn"] button,
+div[class*="st-key-regen-btn"] button *{
+    color: white !important;
+}
 div[class*="st-key-regen-btn"] button{
     background: var(--purple) !important;
     border-color: var(--purple) !important;
-    color: white !important;
 }
 div[class*="st-key-regen-btn"] button:hover:not(:disabled){
     background: var(--purple-hover) !important;
@@ -431,10 +468,13 @@ div[class*="st-key-regen-btn"] button:hover:not(:disabled){
     box-shadow: var(--shadow-md);
 }
 
+div[class*="st-key-edit-btn"] button,
+div[class*="st-key-edit-btn"] button *{
+    color: white !important;
+}
 div[class*="st-key-edit-btn"] button{
     background: var(--blue) !important;
     border-color: var(--blue) !important;
-    color: white !important;
 }
 div[class*="st-key-edit-btn"] button:hover:not(:disabled){
     background: var(--blue-hover) !important;
@@ -443,10 +483,15 @@ div[class*="st-key-edit-btn"] button:hover:not(:disabled){
 }
 
 div[class*="st-key-pdf-download-btn"] button,
+div[class*="st-key-pdf-download-btn"] button *,
+div[class*="st-key-fb-pdf-download-btn"] button,
+div[class*="st-key-fb-pdf-download-btn"] button *{
+    color: white !important;
+}
+div[class*="st-key-pdf-download-btn"] button,
 div[class*="st-key-fb-pdf-download-btn"] button{
     background: var(--ink) !important;
     border-color: var(--ink) !important;
-    color: white !important;
     border-radius: var(--radius-sm);
     font-weight: 600;
 }
