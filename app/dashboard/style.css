@@ -43,6 +43,9 @@
     --muted-bg: #EEEEF3;
     --muted-hover: #E2E2EA;
 
+    --orange: #F97316;
+    --orange-hover: #EA660B;
+
     --radius-sm: 8px;
     --radius: 12px;
     --radius-lg: 16px;
@@ -560,14 +563,199 @@ div[class*="st-key-pillbtn-schedule-"] button:hover:not(:disabled){
     box-shadow: var(--shadow-md);
 }
 
-div[class*="st-key-pillbtn-group-"] button{
-    background: var(--muted-bg) !important;
-}
+div[class*="st-key-pillbtn-group-"] button,
 div[class*="st-key-pillbtn-group-"] button *{
-    color: var(--text-muted) !important;
+    color: white !important;
+}
+div[class*="st-key-pillbtn-group-"] button{
+    background: var(--orange) !important;
 }
 div[class*="st-key-pillbtn-group-"] button:hover{
-    background: var(--muted-hover) !important;
+    background: var(--orange-hover) !important;
+    box-shadow: var(--shadow-md);
+}
+
+
+/* ==========================================================
+   WORKFLOW STEPPER (Post -> Hook -> Image -> Done)
+========================================================== */
+
+.stepper-track{
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    padding: 6px 4px 14px 4px;
+}
+
+.stepper-step{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.stepper-circle{
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.stepper-circle.done{
+    background: var(--green);
+    color: white;
+}
+
+.stepper-circle.active{
+    background: var(--brand);
+    color: white;
+    box-shadow: 0 0 0 4px var(--brand-tint);
+}
+
+.stepper-circle.upcoming{
+    background: var(--muted-bg);
+    color: var(--text-faint);
+}
+
+.stepper-label{
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.stepper-label.done{ color: var(--green-hover); }
+.stepper-label.active{ color: var(--brand); }
+.stepper-label.upcoming{ color: var(--text-faint); }
+
+.stepper-line{
+    flex: 1 1 auto;
+    height: 2px;
+    margin: 14px 6px 0 6px;
+    min-width: 20px;
+}
+
+.stepper-line.done{ background: var(--green); }
+.stepper-line.upcoming{ background: var(--border); }
+
+
+/* ==========================================================
+   FACEBOOK POST PREVIEW CARD
+   A visual-only mockup of the real Facebook post, built from the
+   existing approved text/hook/image - not a live Facebook embed.
+========================================================== */
+
+.fb-preview-card{
+    background: var(--surface);
+    border: 1px solid #DADDE1;
+    border-radius: var(--radius);
+    max-width: 420px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin: 10px 0 18px 0;
+}
+
+.fb-preview-header{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px 8px 14px;
+}
+
+.fb-preview-avatar{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--facebook);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    flex-shrink: 0;
+    text-transform: lowercase;
+}
+
+.fb-preview-meta{
+    flex: 1;
+    min-width: 0;
+}
+
+.fb-preview-name{
+    font-weight: 700;
+    font-size: 14.5px;
+    color: #050505;
+}
+
+.fb-preview-sub{
+    font-size: 12.5px;
+    color: #65676B;
+}
+
+.fb-preview-menu{
+    color: #65676B;
+    font-size: 16px;
+    letter-spacing: 1px;
+    padding: 4px 6px;
+}
+
+.fb-preview-text{
+    padding: 0 14px 10px 14px;
+    font-size: 14.5px;
+    color: #050505;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+.fb-preview-image{
+    width: 100%;
+    display: block;
+    max-height: 420px;
+    object-fit: cover;
+}
+
+.fb-preview-stats{
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #65676B;
+    border-bottom: 1px solid #E4E6EB;
+}
+
+.fb-preview-actions{
+    display: flex;
+    padding: 4px 8px;
+}
+
+.fb-preview-action{
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #65676B;
+    border-radius: var(--radius-sm);
+}
+
+
+/* ==========================================================
+   RADIO GROUPS (e.g. "Publish with")
+========================================================== */
+
+div[data-testid="stRadio"] > div[role="radiogroup"]{
+    gap: 10px;
+    padding: 4px 0;
+}
+
+div[data-testid="stRadio"] label{
+    font-size: 14px;
 }
 
 

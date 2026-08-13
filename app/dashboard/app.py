@@ -1,6 +1,8 @@
 import sys
 import os
 import json
+import base64
+import html as html_lib
 from datetime import datetime, date, time as dtime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,17 +72,73 @@ def save_audio_locally(uploaded_file):
 
 
 def render_stage_tracker(current_stage):
+    """Post -> Hook -> Image -> Done stepper. Same 4 steps as before, just rendered as a
+    connected-line stepper instead of plain columns of emoji text."""
     stage_order = {"post": 0, "hook": 1, "image": 2, "complete": 3}
     current_index = stage_order.get(current_stage, 0)
-    cols = st.columns(4)
+
+    steps_html = []
     for i, step_name in enumerate(STAGE_STEPS):
-        with cols[i]:
-            if i < current_index:
-                st.markdown(f"✅ **{step_name}**")
-            elif i == current_index:
-                st.markdown(f"🟣 **{step_name}**")
-            else:
-                st.markdown(f"⚪ {step_name}")
+        if i < current_index:
+            circle, css_class = "✓", "done"
+        elif i == current_index:
+            circle, css_class = str(i + 1), "active"
+        else:
+            circle, css_class = str(i + 1), "upcoming"
+
+        line_class = "done" if i < current_index else "upcoming"
+        connector = f'<div class="stepper-line {line_class}"></div>' if i > 0 else ""
+        steps_html.append(
+            f'{connector}<div class="stepper-step">'
+            f'<div class="stepper-circle {css_class}">{circle}</div>'
+            f'<div class="stepper-label {css_class}">{html_lib.escape(step_name)}</div>'
+            f'</div>'
+        )
+
+    st.markdown(f'<div class="stepper-track">{"".join(steps_html)}</div>', unsafe_allow_html=True)
+
+
+def _image_to_data_uri(path):
+    """Inline a local image file as a base64 data URI, since the browser can't load a
+    filesystem path directly. Returns None if there's nothing to embed."""
+    if not path or not os.path.exists(path):
+        return None
+    ext = os.path.splitext(path)[1].lstrip(".").lower() or "png"
+    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:image/{mime};base64,{b64}"
+
+
+def render_facebook_post_preview(post_text, image_path):
+    """Visual-only mockup of how this post will render on Facebook, built from the
+    existing approved post text and image - no live Facebook data involved."""
+    img_uri = _image_to_data_uri(image_path)
+    image_html = f'<img class="fb-preview-image" src="{img_uri}" />' if img_uri else ""
+
+    st.markdown(f"""
+    <div class="fb-preview-card">
+        <div class="fb-preview-header">
+            <div class="fb-preview-avatar">f</div>
+            <div class="fb-preview-meta">
+                <div class="fb-preview-name">Your Facebook Page</div>
+                <div class="fb-preview-sub">Just now &middot; 🌐</div>
+            </div>
+            <div class="fb-preview-menu">&#8226;&#8226;&#8226;</div>
+        </div>
+        <div class="fb-preview-text">{html_lib.escape(post_text)}</div>
+        {image_html}
+        <div class="fb-preview-stats">
+            <span>👍 ❤️ 24</span>
+            <span>3 comments &middot; 1 share</span>
+        </div>
+        <div class="fb-preview-actions">
+            <div class="fb-preview-action">👍&nbsp; Like</div>
+            <div class="fb-preview-action">💬&nbsp; Comment</div>
+            <div class="fb-preview-action">↪&nbsp; Share</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def render_accept_regenerate_edit(item_id, current_value, on_save, on_regenerate, on_accept,
@@ -474,8 +532,9 @@ def render_staged_detail(item, content_type, data):
                         st.rerun()
 
     elif item.stage == "complete":
-        st.text_area("Final post", value=data.get("text", ""), height=80, disabled=True, key=f"final_text_{item.id}")
-        st.text_area("Final hook", value=item.hook_content or "", height=50, disabled=True, key=f"final_hook_{item.id}")
+        if content_type != "facebook_post":
+            st.text_area("Final post", value=data.get("text", ""), height=80, disabled=True, key=f"final_text_{item.id}")
+            st.text_area("Final hook", value=item.hook_content or "", height=50, disabled=True, key=f"final_hook_{item.id}")
         st.success("Hook and image both approved.")
 
         st.divider()
@@ -494,14 +553,22 @@ def render_staged_detail(item, content_type, data):
             save_final_composition(item.id, item.final_image_path, want_hook_on_image)
             st.rerun()
 
+        is_facebook_preview = content_type == "facebook_post"
+
         if want_hook_on_image:
             if item.final_image_path:
-                st.markdown("**Preview: hook on image**")
-                st.image(item.final_image_path, width=320)
+                if is_facebook_preview:
+                    render_facebook_post_preview(data.get("text", ""), item.final_image_path)
+                else:
+                    st.markdown("**Preview: hook on image**")
+                    st.image(item.final_image_path, width=320)
             else:
                 st.info("Not composed yet. Generate a preview of the hook placed on the image below.")
                 if item.image_path:
-                    st.image(item.image_path, width=320)
+                    if is_facebook_preview:
+                        render_facebook_post_preview(data.get("text", ""), item.image_path)
+                    else:
+                        st.image(item.image_path, width=320)
 
             compose_instructions = st.text_area(
                 "Instructions for hook + image",
@@ -521,12 +588,18 @@ def render_staged_detail(item, content_type, data):
                         st.stop()
                 st.rerun()
         elif want_text_only:
-            st.markdown("**Preview: post text only**")
-            st.caption("No hook or image will be published - only the post text.")
+            if is_facebook_preview:
+                render_facebook_post_preview(data.get("text", ""), None)
+            else:
+                st.markdown("**Preview: post text only**")
+                st.caption("No hook or image will be published - only the post text.")
         else:
-            st.markdown("**Preview: image only**")
-            if item.image_path:
-                st.image(item.image_path, width=320)
+            if is_facebook_preview:
+                render_facebook_post_preview(data.get("text", ""), item.image_path)
+            else:
+                st.markdown("**Preview: image only**")
+                if item.image_path:
+                    st.image(item.image_path, width=320)
 
         st.divider()
         st.markdown("#### Final Approval")
