@@ -19,7 +19,7 @@ from services.content_service import (
 )
 from services.image_service import generate_image
 from services.image_compose_service import compose_hook_on_image
-from services.pdf_service import generate_approved_content_pdf
+from services.pdf_service import generate_approved_content_pdf, generate_facebook_pdf
 from services.publisher_service import publish_facebook_item
 from services.scheduler_service import start_scheduler
 from db import (
@@ -255,6 +255,20 @@ def render_tab(content_type, items):
         f"{meta['icon']} {meta['label']}</div>",
         unsafe_allow_html=True
     )
+
+    if content_type == "facebook_post":
+        complete_items = [i for i in items if i.stage == "complete"]
+        if complete_items:
+            fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
+            with st.container(key="fb-pdf-download-btn"):
+                st.download_button(
+                    f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
+                    data=fb_pdf_bytes,
+                    file_name=f"job_{selected_job.id}_facebook_posts.pdf",
+                    mime="application/pdf",
+                )
+        else:
+            st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
 
     list_col, detail_col, schedule_col = st.columns([0.9, 3.4, 1.1],gap="medium")
 

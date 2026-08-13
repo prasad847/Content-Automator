@@ -349,3 +349,23 @@ div[class*="st-key-pdf-download-btn"] button:hover{
 
     border-color:#111827 !important;
 }
+
+div[class*="st-key-fb-pdf-download-btn"] button{
+
+    background:#1F2937 !important;
+
+    border-color:#1F2937 !important;
+
+    color:white !important;
+
+    border-radius:10px;
+
+    font-weight:600;
+}
+
+div[class*="st-key-fb-pdf-download-btn"] button:hover{
+
+    background:#111827 !important;
+
+    border-color:#111827 !important;
+}

@@ -1,4 +1,5 @@
 import json
+import os
 from fpdf import FPDF
 
 TYPE_LABELS = {
@@ -96,5 +97,48 @@ def generate_approved_content_pdf(job, items):
             pdf.ln(4)
 
         pdf.ln(4)
+
+    return bytes(pdf.output())
+
+
+def generate_facebook_pdf(job, items):
+    """Build a PDF of Facebook posts that have completed the full pipeline (post + hook +
+    image all approved), including each post's hook and final image. Returns raw PDF bytes."""
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(0, 10, _clean(f"Approved Facebook Posts - {job.file_name}"), ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(0, 8, _clean(f"Job #{job.id}"), ln=True)
+    pdf.ln(5)
+
+    for item in items:
+        data = json.loads(item.content)
+
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_text_color(80, 40, 150)
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(0, 10, _clean(f"Post #{item.item_index}"), ln=True)
+        pdf.set_text_color(0, 0, 0)
+
+        pdf.set_font("Helvetica", "B", 10)
+        _write_paragraph(pdf, "Hook: " + (item.hook_content or "(none)"))
+        pdf.set_font("Helvetica", "", 10)
+        _write_paragraph(pdf, data.get("text", ""))
+
+        image_path = item.final_image_path if (item.hook_on_image and item.final_image_path) else item.image_path
+        if image_path and os.path.exists(image_path):
+            pdf.ln(2)
+            try:
+                pdf.image(image_path, x=pdf.l_margin, w=100)
+            except Exception:
+                # Skip an unreadable/corrupt image rather than failing the whole PDF.
+                pass
+
+        pdf.ln(6)
 
     return bytes(pdf.output())
