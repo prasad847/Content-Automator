@@ -36,9 +36,17 @@
     --amber: #D97706;
     --amber-tint: #FEF3E2;
 
+    --facebook: #1877F2;
+    --facebook-hover: #145DC4;
+    --facebook-tint: #E9F1FE;
+
+    --muted-bg: #EEEEF3;
+    --muted-hover: #E2E2EA;
+
     --radius-sm: 8px;
     --radius: 12px;
     --radius-lg: 16px;
+    --radius-pill: 999px;
 
     --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
     --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
@@ -501,4 +509,105 @@ div[class*="st-key-fb-pdf-download-btn"] button:hover:not(:disabled){
     background: var(--ink-hover) !important;
     border-color: var(--ink-hover) !important;
     box-shadow: var(--shadow-md);
+}
+
+
+/* ==========================================================
+   FINAL APPROVAL - STACKED PILL BUTTONS
+========================================================== */
+
+div[class*="st-key-pillbtn-"]{
+    margin-bottom: 10px;
+}
+
+div[class*="st-key-pillbtn-"] button{
+    border-radius: var(--radius-pill) !important;
+    padding: 14px 22px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    border: none !important;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+div[class*="st-key-pillbtn-"] button p{
+    text-align: left !important;
+}
+
+div[class*="st-key-pillbtn-"] button:active:not(:disabled){
+    transform: translateY(1px);
+}
+
+div[class*="st-key-pillbtn-publish-"] button,
+div[class*="st-key-pillbtn-publish-"] button *{
+    color: white !important;
+}
+div[class*="st-key-pillbtn-publish-"] button{
+    background: var(--facebook) !important;
+}
+div[class*="st-key-pillbtn-publish-"] button:hover:not(:disabled){
+    background: var(--facebook-hover) !important;
+    box-shadow: var(--shadow-md);
+}
+
+div[class*="st-key-pillbtn-schedule-"] button,
+div[class*="st-key-pillbtn-schedule-"] button *{
+    color: white !important;
+}
+div[class*="st-key-pillbtn-schedule-"] button{
+    background: var(--green) !important;
+}
+div[class*="st-key-pillbtn-schedule-"] button:hover:not(:disabled){
+    background: var(--green-hover) !important;
+    box-shadow: var(--shadow-md);
+}
+
+div[class*="st-key-pillbtn-group-"] button{
+    background: var(--muted-bg) !important;
+}
+div[class*="st-key-pillbtn-group-"] button *{
+    color: var(--text-muted) !important;
+}
+div[class*="st-key-pillbtn-group-"] button:hover{
+    background: var(--muted-hover) !important;
+}
+
+
+/* ==========================================================
+   FACEBOOK SECTION THEMING
+   Everything inside the Facebook tab picks up Facebook blue as its
+   accent instead of the app-wide brand purple, so approving/publishing
+   a Facebook post visually feels like a Facebook surface.
+========================================================== */
+
+div[class*="st-key-platform-section-facebook_post"]{
+    background: linear-gradient(180deg, var(--facebook-tint) 0%, rgba(233, 241, 254, 0) 260px);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    margin: -10px;
+}
+
+div[class*="st-key-platform-section-facebook_post"] .stButton button[kind="primary"],
+div[class*="st-key-platform-section-facebook_post"] .stButton button[kind="primary"] *{
+    color: white !important;
+}
+div[class*="st-key-platform-section-facebook_post"] .stButton button[kind="primary"]{
+    background: var(--facebook) !important;
+    border-color: var(--facebook) !important;
+}
+div[class*="st-key-platform-section-facebook_post"] .stButton button[kind="primary"]:hover:not(:disabled){
+    background: var(--facebook-hover) !important;
+    border-color: var(--facebook-hover) !important;
+}
+
+div[class*="st-key-platform-section-facebook_post"] .stTextArea textarea:focus,
+div[class*="st-key-platform-section-facebook_post"] .stTextInput input:focus{
+    border-color: var(--facebook) !important;
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.25) !important;
+}
+
+div[class*="st-key-platform-section-facebook_post"] div[data-testid="stVerticalBlockBorderWrapper"]{
+    border-color: #D6E6FC !important;
 }

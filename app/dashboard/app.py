@@ -256,66 +256,67 @@ def render_tab(content_type, items):
         unsafe_allow_html=True
     )
 
-    if content_type == "facebook_post":
-        complete_items = [i for i in items if i.stage == "complete"]
-        if complete_items:
-            fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
-            with st.container(key="fb-pdf-download-btn"):
-                st.download_button(
-                    f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
-                    data=fb_pdf_bytes,
-                    file_name=f"job_{selected_job.id}_facebook_posts.pdf",
-                    mime="application/pdf",
-                )
-        else:
-            st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
+    with st.container(key=f"platform-section-{content_type}"):
+        if content_type == "facebook_post":
+            complete_items = [i for i in items if i.stage == "complete"]
+            if complete_items:
+                fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
+                with st.container(key="fb-pdf-download-btn"):
+                    st.download_button(
+                        f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
+                        data=fb_pdf_bytes,
+                        file_name=f"job_{selected_job.id}_facebook_posts.pdf",
+                        mime="application/pdf",
+                    )
+            else:
+                st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
 
-    list_col, detail_col = st.columns([1, 4.4], gap="medium")
+        list_col, detail_col = st.columns([1, 4.4], gap="medium")
 
-    # Tracked by item_index (stable across regeneration) rather than item.id, because
-    # regenerate_content_item() deletes the old row and inserts a new one with a new id -
-    # tracking by id would silently snap the selection back to Post 1 on every regenerate.
-    selection_key = f"selected_item_{content_type}"
-    if selection_key not in st.session_state:
-        st.session_state[selection_key] = items[0].item_index
+        # Tracked by item_index (stable across regeneration) rather than item.id, because
+        # regenerate_content_item() deletes the old row and inserts a new one with a new id -
+        # tracking by id would silently snap the selection back to Post 1 on every regenerate.
+        selection_key = f"selected_item_{content_type}"
+        if selection_key not in st.session_state:
+            st.session_state[selection_key] = items[0].item_index
 
-    with list_col:
-        for item in items:
-            is_selected = st.session_state[selection_key] == item.item_index
+        with list_col:
+            for item in items:
+                is_selected = st.session_state[selection_key] == item.item_index
+                with st.container(border=True):
+                    status_kind = "approved" if item.status == "approved" else "draft"
+                    if content_type in STAGED_TYPES and item.stage == "complete":
+                        status_kind = "complete"
+                    st.markdown(
+                        f"<span class='post-title'>Post {item.item_index}</span> {badge(item.status, status_kind)}",
+                        unsafe_allow_html=True
+                    )
+                    if content_type in STAGED_TYPES:
+                        st.caption(f"Stage: {item.stage}")
+                    if item.scheduled_at:
+                        st.caption(f"📅 {item.scheduled_at.strftime('%b %d, %I:%M %p')}")
+                    with st.container(key=f"selectbtn-wrap-{item.id}"):
+                        if st.button("Select", key=f"pick_{item.id}", type="primary" if is_selected else "secondary",
+                                     use_container_width=True):
+                            st.session_state[selection_key] = item.item_index
+                            st.rerun()
+
+        selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
+        data = json.loads(selected_item.content)
+
+        with detail_col:
             with st.container(border=True):
-                status_kind = "approved" if item.status == "approved" else "draft"
-                if content_type in STAGED_TYPES and item.stage == "complete":
-                    status_kind = "complete"
                 st.markdown(
-                    f"<span class='post-title'>Post {item.item_index}</span> {badge(item.status, status_kind)}",
+                    f"<span class='post-title'>Post {selected_item.item_index}</span> "
+                    f"<span class='post-version'>v{selected_item.version}</span>",
                     unsafe_allow_html=True
                 )
                 if content_type in STAGED_TYPES:
-                    st.caption(f"Stage: {item.stage}")
-                if item.scheduled_at:
-                    st.caption(f"📅 {item.scheduled_at.strftime('%b %d, %I:%M %p')}")
-                with st.container(key=f"selectbtn-wrap-{item.id}"):
-                    if st.button("Select", key=f"pick_{item.id}", type="primary" if is_selected else "secondary",
-                                 use_container_width=True):
-                        st.session_state[selection_key] = item.item_index
-                        st.rerun()
-
-    selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
-    data = json.loads(selected_item.content)
-
-    with detail_col:
-        with st.container(border=True):
-            st.markdown(
-                f"<span class='post-title'>Post {selected_item.item_index}</span> "
-                f"<span class='post-version'>v{selected_item.version}</span>",
-                unsafe_allow_html=True
-            )
-            if content_type in STAGED_TYPES:
-                render_stage_tracker(selected_item.stage)
-                st.divider()
-                render_staged_detail(selected_item, content_type, data)
-            else:
-                render_simple_detail(selected_item, content_type, data)
+                    render_stage_tracker(selected_item.stage)
+                    st.divider()
+                    render_staged_detail(selected_item, content_type, data)
+                else:
+                    render_simple_detail(selected_item, content_type, data)
 
 
 def render_staged_detail(item, content_type, data):
@@ -555,11 +556,10 @@ def render_staged_detail(item, content_type, data):
             if schedule_open_key not in st.session_state:
                 st.session_state[schedule_open_key] = False
 
-            pc1, pc2, pc3 = st.columns(3)
-            with pc1:
-                if content_type == "facebook_post":
-                    if st.button("🚀 Approve & Publish Now", key=f"publish_now_{item.id}",
-                                 type="primary", disabled=publish_blocked, use_container_width=True):
+            if content_type == "facebook_post":
+                with st.container(key=f"pillbtn-publish-{item.id}"):
+                    if st.button("📘  Approve & Publish to Facebook", key=f"publish_now_{item.id}",
+                                 disabled=publish_blocked, use_container_width=True):
                         with st.spinner("Publishing to Facebook..."):
                             approve_final(item.id)
                             # Hook text is never duplicated as a separate caption - it's either
@@ -582,19 +582,21 @@ def render_staged_detail(item, content_type, data):
                                 with st.expander("Technical details"):
                                     st.code(str(e))
                         st.rerun()
-                    if publish_blocked:
-                        st.caption("Generate the hook + image preview above first.")
-            with pc2:
-                with st.container(key=f"edit-btn-schedule-{item.id}"):
-                    if st.button("📅 Approve & Schedule Date & Time", key=f"schedule_toggle_{item.id}",
-                                 disabled=publish_blocked, use_container_width=True):
-                        st.session_state[schedule_open_key] = not st.session_state[schedule_open_key]
-                        st.rerun()
                 if publish_blocked:
                     st.caption("Generate the hook + image preview above first.")
-            with pc3:
+
+            with st.container(key=f"pillbtn-schedule-{item.id}"):
+                if st.button("✅  Approve & Schedule Date & Time", key=f"schedule_toggle_{item.id}",
+                             disabled=publish_blocked, use_container_width=True):
+                    st.session_state[schedule_open_key] = not st.session_state[schedule_open_key]
+                    st.rerun()
+            if publish_blocked:
+                st.caption("Generate the hook + image preview above first.")
+
+            with st.container(key=f"pillbtn-group-{item.id}"):
                 # Placeholder only - group scheduling isn't implemented yet.
-                if st.button("🗓️ Schedule in Group", key=f"schedule_group_{item.id}", use_container_width=True):
+                if st.button("🗓️  Schedule in Group (Coming Soon)", key=f"schedule_group_{item.id}",
+                             use_container_width=True):
                     st.info("Scheduling in a group is coming soon.")
 
             if st.session_state[schedule_open_key]:
