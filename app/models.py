@@ -72,7 +72,7 @@ class ContentItem(Base):
     image_version = Column(Integer, default=0)  # bumps each time an image is (re)generated
     hook_on_image = Column(Boolean, default=False)  # whether the hook text is composited onto the image
     final_image_path = Column(Text, nullable=True)  # image with hook text burned in, when hook_on_image is True
-    final_status = Column(String, default="draft")  # draft, final_approved, published, failed
+    final_status = Column(String, default="draft")  # draft, final_approved, scheduled, published, failed
     error_message = Column(Text, nullable=True)  # last publish error, if any
     publish_include_text = Column(Boolean, default=True)
     publish_include_hook = Column(Boolean, default=False)

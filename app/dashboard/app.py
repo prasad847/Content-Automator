@@ -21,16 +21,20 @@ from services.image_service import generate_image
 from services.image_compose_service import compose_hook_on_image
 from services.pdf_service import generate_approved_content_pdf
 from services.publisher_service import publish_facebook_item
+from services.scheduler_service import start_scheduler
 from db import (
     get_all_jobs, get_transcript_text, get_content_items,
     update_content_item_status, update_content_item_text,
     update_content_item_schedule, regenerate_content_item, get_approved_items,
     approve_post_and_advance, save_hook, approve_hook_and_advance,
     save_image, approve_image_and_complete, update_publish_flags,
-    save_final_composition, approve_final, mark_content_item_failed,
+    save_final_composition, approve_final, approve_and_schedule, cancel_schedule,
+    mark_content_item_failed,
     create_job, save_transcript, save_content_items, update_job_status, log_event,
     reset_and_regenerate_item
 )
+
+start_scheduler()
 
 css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.css")
 if os.path.exists(css_path):
@@ -80,14 +84,26 @@ def render_stage_tracker(current_stage):
 
 
 def render_accept_regenerate_edit(item_id, current_value, on_save, on_regenerate, on_accept,
-                                   height=100, area_label="Content"):
-    """Generic 3-button pattern: Accept (green) / Regenerate (purple) / Edit -> Save & Accept (blue)."""
+                                   height=100, area_label="Content", show_instructions=False,
+                                   instructions_placeholder=""):
+    """Generic 3-button pattern: Accept (green) / Regenerate (purple) / Edit -> Save & Accept (blue).
+
+    If show_instructions is True, an optional instructions box is rendered above the button
+    row, and its value (or "" if left blank) is passed to on_regenerate so the same Regenerate
+    button covers both "regenerate as-is" and "regenerate with instructions"."""
     editing_key = f"editing_{item_id}"
     if editing_key not in st.session_state:
         st.session_state[editing_key] = False
 
     if not st.session_state[editing_key]:
         st.write(current_value)
+        instructions = ""
+        if show_instructions:
+            instructions = st.text_area(
+                "Instructions for regeneration (optional)",
+                placeholder=instructions_placeholder,
+                key=f"instructions_{item_id}", height=70
+            )
         c1, c2, c3 = st.columns(3)
         with c1:
             with st.container(key=f"accept-btn-{item_id}"):
@@ -97,7 +113,10 @@ def render_accept_regenerate_edit(item_id, current_value, on_save, on_regenerate
         with c2:
             with st.container(key=f"regen-btn-{item_id}"):
                 if st.button("Regenerate", key=f"regenbtn_{item_id}", use_container_width=True):
-                    on_regenerate()
+                    if show_instructions:
+                        on_regenerate(instructions)
+                    else:
+                        on_regenerate()
                     st.rerun()
         with c3:
             if st.button("Edit", key=f"editbtn_{item_id}", use_container_width=True):
@@ -362,10 +381,17 @@ def render_staged_detail(item, content_type, data):
         st.text_area("Approved post", value=data.get("text", ""), height=80, disabled=True, key=f"locked_text_{item.id}")
 
         if not item.hook_content:
+            initial_hook_instructions = st.text_area(
+                "Instructions for the hook (optional)",
+                placeholder="Tell the AI what tone or angle you want. Example: curiosity-driven, "
+                            "focus on the biggest takeaway, keep it under 8 words. Leave blank for a "
+                            "default hook.",
+                key=f"initial_hook_instructions_{item.id}", height=70
+            )
             if st.button("Generate hook", key=f"gen_hook_{item.id}"):
                 with st.spinner("Generating hook..."):
                     try:
-                        hook_text = generate_hook(data.get("text", ""))
+                        hook_text = generate_hook(data.get("text", ""), instructions=initial_hook_instructions or None)
                         save_hook(item.id, hook_text)
                     except Exception as e:
                         st.error("Hook generation failed. Try again.")
@@ -375,25 +401,11 @@ def render_staged_detail(item, content_type, data):
                 st.rerun()
         else:
             st.caption(f"Version {item.hook_version}")
-            render_accept_regenerate_edit(
-                item_id=f"hook_{item.id}",
-                current_value=item.hook_content,
-                on_save=lambda new_val: save_hook(item.id, new_val),
-                on_regenerate=lambda: save_hook(item.id, generate_hook(data.get("text", ""), previous_hook=item.hook_content)),
-                on_accept=lambda: approve_hook_and_advance(item.id),
-                height=60, area_label="Hook"
-            )
 
-            hook_instructions = st.text_area(
-                "Instructions for hook regeneration",
-                placeholder="Tell the AI what you want changed. Example: Make it more emotional, "
-                            "shorter, more curiosity-driven, or professional.",
-                key=f"hook_instructions_{item.id}", height=70
-            )
-            if st.button("Regenerate with Instructions", key=f"regen_hook_instr_{item.id}"):
+            def regenerate_hook(instructions):
                 with st.spinner("Regenerating hook..."):
                     try:
-                        new_hook = generate_hook(data.get("text", ""), instructions=hook_instructions,
+                        new_hook = generate_hook(data.get("text", ""), instructions=instructions or None,
                                                   previous_hook=item.hook_content)
                         save_hook(item.id, new_hook)
                     except Exception as e:
@@ -401,17 +413,36 @@ def render_staged_detail(item, content_type, data):
                         with st.expander("Technical details"):
                             st.code(str(e))
                         st.stop()
-                st.rerun()
+
+            render_accept_regenerate_edit(
+                item_id=f"hook_{item.id}",
+                current_value=item.hook_content,
+                on_save=lambda new_val: save_hook(item.id, new_val),
+                on_regenerate=regenerate_hook,
+                on_accept=lambda: approve_hook_and_advance(item.id),
+                height=60, area_label="Hook",
+                show_instructions=True,
+                instructions_placeholder="Tell the AI what you want changed. Example: Make it more "
+                                          "emotional, shorter, more curiosity-driven, or professional. "
+                                          "Leave blank to regenerate as-is."
+            )
 
     elif item.stage == "image":
         st.text_area("Approved post", value=data.get("text", ""), height=80, disabled=True, key=f"locked_text_{item.id}")
         st.text_area("Approved hook", value=item.hook_content or "", height=50, disabled=True, key=f"locked_hook_{item.id}")
 
         if not item.image_path:
+            initial_image_instructions = st.text_area(
+                "Instructions for the image (optional)",
+                placeholder="Tell the AI what you want. Example: dark background, show a laptop, "
+                            "minimalist style. Leave blank for a default image.",
+                key=f"initial_img_instructions_{item.id}", height=70
+            )
             if st.button("Generate image", key=f"gen_img_{item.id}"):
                 with st.spinner("Generating image..."):
                     try:
-                        image_path = generate_image(data.get("text", ""), item.hook_content)
+                        image_path = generate_image(data.get("text", ""), item.hook_content,
+                                                      initial_image_instructions or None)
                         save_image(item.id, image_path)
                     except Exception as e:
                         st.error("Image generation failed. Try again or modify your instructions.")
@@ -422,25 +453,6 @@ def render_staged_detail(item, content_type, data):
         else:
             st.caption(f"Version {item.image_version}")
             st.image(item.image_path, width=280)
-            c1, c2 = st.columns(2)
-            with c1:
-                with st.container(key=f"regen-btn-img-{item.id}"):
-                    if st.button("Regenerate", key=f"regen_img_{item.id}", use_container_width=True):
-                        with st.spinner("Regenerating image..."):
-                            try:
-                                image_path = generate_image(data.get("text", ""), item.hook_content)
-                                save_image(item.id, image_path)
-                            except Exception as e:
-                                st.error("Image generation failed. Try again or modify your instructions.")
-                                with st.expander("Technical details"):
-                                    st.code(str(e))
-                                st.stop()
-                        st.rerun()
-            with c2:
-                with st.container(key=f"accept-btn-img-{item.id}"):
-                    if st.button("Accept Image", key=f"approve_img_{item.id}", use_container_width=True):
-                        approve_image_and_complete(item.id)
-                        st.rerun()
 
             img_instructions_key = f"img_instructions_{item.id}"
             img_instructions_reset_key = f"{img_instructions_key}_reset"
@@ -452,24 +464,34 @@ def render_staged_detail(item, content_type, data):
                 st.session_state[img_instructions_reset_key] = False
 
             image_instructions = st.text_area(
-                "Instructions for image regeneration",
+                "Instructions for image regeneration (optional)",
                 placeholder="Tell the AI what you want changed. Example: Make it more professional, "
                             "use a darker background, show a person working on a laptop, remove "
-                            "unnecessary objects, make it more realistic.",
+                            "unnecessary objects, make it more realistic. Leave blank to regenerate as-is.",
                 key=img_instructions_key, height=70
             )
-            if st.button("Regenerate with Instructions", key=f"regen_img_instr_{item.id}"):
-                with st.spinner("Regenerating image..."):
-                    try:
-                        image_path = generate_image(data.get("text", ""), item.hook_content, image_instructions)
-                        save_image(item.id, image_path)
-                    except Exception as e:
-                        st.error("Image generation failed. Try again or modify your instructions.")
-                        with st.expander("Technical details"):
-                            st.code(str(e))
-                        st.stop()
-                st.session_state[img_instructions_reset_key] = True
-                st.rerun()
+
+            c1, c2 = st.columns(2)
+            with c1:
+                with st.container(key=f"regen-btn-img-{item.id}"):
+                    if st.button("Regenerate", key=f"regen_img_{item.id}", use_container_width=True):
+                        with st.spinner("Regenerating image..."):
+                            try:
+                                image_path = generate_image(data.get("text", ""), item.hook_content,
+                                                              image_instructions or None)
+                                save_image(item.id, image_path)
+                            except Exception as e:
+                                st.error("Image generation failed. Try again or modify your instructions.")
+                                with st.expander("Technical details"):
+                                    st.code(str(e))
+                                st.stop()
+                        st.session_state[img_instructions_reset_key] = True
+                        st.rerun()
+            with c2:
+                with st.container(key=f"accept-btn-img-{item.id}"):
+                    if st.button("Accept Image", key=f"approve_img_{item.id}", use_container_width=True):
+                        approve_image_and_complete(item.id)
+                        st.rerun()
 
     elif item.stage == "complete":
         st.text_area("Final post", value=data.get("text", ""), height=80, disabled=True, key=f"final_text_{item.id}")
@@ -480,12 +502,13 @@ def render_staged_detail(item, content_type, data):
         st.markdown("#### Publish with")
 
         publish_mode = st.radio(
-            "Choose how the post should look on Facebook",
-            ["Post + Hook on Image", "Post + Image"],
+            "Choose how the post should look when published",
+            ["Post + Hook on Image", "Post + Image", "Only Post"],
             index=0 if item.hook_on_image else 1,
             key=f"publish_mode_{item.id}"
         )
         want_hook_on_image = publish_mode == "Post + Hook on Image"
+        want_text_only = publish_mode == "Only Post"
 
         if want_hook_on_image != item.hook_on_image:
             save_final_composition(item.id, item.final_image_path, want_hook_on_image)
@@ -517,6 +540,9 @@ def render_staged_detail(item, content_type, data):
                             st.code(str(e))
                         st.stop()
                 st.rerun()
+        elif want_text_only:
+            st.markdown("**Preview: post text only**")
+            st.caption("No hook or image will be published - only the post text.")
         else:
             st.markdown("**Preview: image only**")
             if item.image_path:
@@ -527,19 +553,34 @@ def render_staged_detail(item, content_type, data):
         st.markdown(f"**Hook:** {item.hook_content or '(none)'}")
         st.markdown(f"**Post:** {data.get('text', '')}")
 
-        publish_image = item.final_image_path if (want_hook_on_image and item.final_image_path) else item.image_path
+        publish_image = None if want_text_only else (
+            item.final_image_path if (want_hook_on_image and item.final_image_path) else item.image_path
+        )
         publish_blocked = want_hook_on_image and not item.final_image_path
 
         if item.final_status == "published":
             st.success("✅ Successfully published to Facebook.")
+        elif item.final_status == "scheduled":
+            when_str = item.scheduled_at.strftime("%b %d, %Y at %I:%M %p") if item.scheduled_at else "an unset time"
+            st.info(f"📅 Approved and scheduled - will publish automatically on {when_str}.")
+            with st.container(key=f"cancel-schedule-btn-{item.id}"):
+                if st.button("Cancel schedule", key=f"cancel_schedule_{item.id}"):
+                    cancel_schedule(item.id)
+                    st.rerun()
         else:
-            st.caption("Clicking Approve & Publish is your explicit approval of this final version.")
+            if item.final_status == "final_approved":
+                st.info("✅ Approved - ready to publish or schedule.")
+            st.caption("Approving is your explicit sign-off on this final version.")
+
+            schedule_open_key = f"show_schedule_picker_{item.id}"
+            if schedule_open_key not in st.session_state:
+                st.session_state[schedule_open_key] = False
 
             pc1, pc2, pc3 = st.columns(3)
             with pc1:
                 if content_type == "facebook_post":
-                    if st.button("🚀 Approve & Publish to Facebook", key=f"publish_now_{item.id}",
-                                 type="primary", disabled=publish_blocked):
+                    if st.button("🚀 Approve & Publish Now", key=f"publish_now_{item.id}",
+                                 type="primary", disabled=publish_blocked, use_container_width=True):
                         with st.spinner("Publishing to Facebook..."):
                             approve_final(item.id)
                             # Hook text is never duplicated as a separate caption - it's either
@@ -565,29 +606,39 @@ def render_staged_detail(item, content_type, data):
                     if publish_blocked:
                         st.caption("Generate the hook + image preview above first.")
             with pc2:
-                if st.button("Regenerate Hook", key=f"final_regen_hook_{item.id}"):
-                    with st.spinner("Regenerating hook..."):
-                        try:
-                            new_hook = generate_hook(data.get("text", ""), previous_hook=item.hook_content)
-                            save_hook(item.id, new_hook)
-                        except Exception as e:
-                            st.error("Hook generation failed. Try again.")
-                            with st.expander("Technical details"):
-                                st.code(str(e))
-                            st.stop()
-                    st.rerun()
+                with st.container(key=f"edit-btn-schedule-{item.id}"):
+                    if st.button("📅 Approve & Schedule Date & Time", key=f"schedule_toggle_{item.id}",
+                                 disabled=publish_blocked, use_container_width=True):
+                        st.session_state[schedule_open_key] = not st.session_state[schedule_open_key]
+                        st.rerun()
+                if publish_blocked:
+                    st.caption("Generate the hook + image preview above first.")
             with pc3:
-                if st.button("Regenerate Image", key=f"final_regen_img_{item.id}"):
-                    with st.spinner("Regenerating image..."):
-                        try:
-                            new_image = generate_image(data.get("text", ""), item.hook_content)
-                            save_image(item.id, new_image)
-                        except Exception as e:
-                            st.error("Image generation failed. Try again or modify your instructions.")
-                            with st.expander("Technical details"):
-                                st.code(str(e))
-                            st.stop()
-                    st.rerun()
+                # Placeholder only - group scheduling isn't implemented yet.
+                if st.button("🗓️ Schedule in Group", key=f"schedule_group_{item.id}", use_container_width=True):
+                    st.info("Scheduling in a group is coming soon.")
+
+            if st.session_state[schedule_open_key]:
+                st.markdown("###### Choose when to publish")
+                sc1, sc2, sc3, sc4 = st.columns([2, 2, 1, 1])
+                with sc1:
+                    sched_date = st.date_input("Date", value=date.today(), min_value=date.today(),
+                                                key=f"final_sched_date_{item.id}")
+                with sc2:
+                    sched_time = st.time_input("Time", value=dtime(9, 0), key=f"final_sched_time_{item.id}")
+                with sc3:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                    if st.button("Confirm", key=f"confirm_schedule_{item.id}", type="primary", use_container_width=True):
+                        scheduled_dt = datetime.combine(sched_date, sched_time)
+                        approve_and_schedule(item.id, scheduled_dt)
+                        update_publish_flags(item.id, True, False, bool(publish_image))
+                        st.session_state[schedule_open_key] = False
+                        st.rerun()
+                with sc4:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                    if st.button("Cancel", key=f"cancel_schedule_picker_{item.id}", use_container_width=True):
+                        st.session_state[schedule_open_key] = False
+                        st.rerun()
 
             if item.final_status == "failed" and item.error_message:
                 with st.expander("Last publish error"):

@@ -353,6 +353,42 @@ def approve_final(item_id):
     session.close()
 
 
+def approve_and_schedule(item_id, scheduled_datetime):
+    """Approve the final version and schedule it to auto-publish at the given date/time.
+    The background scheduler (services.scheduler_service) picks this up once it's due."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.final_status = "scheduled"
+    item.scheduled_at = scheduled_datetime
+    item.error_message = None
+    session.commit()
+    session.close()
+
+
+def cancel_schedule(item_id):
+    """Revert a scheduled item back to approved-but-not-scheduled, clearing its publish time."""
+    session = Session()
+    item = session.query(ContentItem).filter(ContentItem.id == item_id).first()
+    item.final_status = "final_approved"
+    item.scheduled_at = None
+    session.commit()
+    session.close()
+
+
+def get_due_scheduled_items():
+    """Return content items whose scheduled publish time has arrived, for the background publisher."""
+    session = Session()
+    items = (
+        session.query(ContentItem)
+        .filter(ContentItem.final_status == "scheduled")
+        .filter(ContentItem.scheduled_at.isnot(None))
+        .filter(ContentItem.scheduled_at <= datetime.now())
+        .all()
+    )
+    session.close()
+    return items
+
+
 def mark_content_item_failed(item_id, error_message):
     """Record a publish failure without losing the approved content."""
     session = Session()
