@@ -25,7 +25,7 @@ from services.scheduler_service import start_scheduler
 from db import (
     get_all_jobs, get_transcript_text, get_content_items,
     update_content_item_status, update_content_item_text,
-    update_content_item_schedule, regenerate_content_item, get_approved_items,
+    regenerate_content_item, get_approved_items,
     approve_post_and_advance, save_hook, approve_hook_and_advance,
     save_image, approve_image_and_complete, update_publish_flags,
     save_final_composition, approve_final, approve_and_schedule, cancel_schedule,
@@ -270,7 +270,7 @@ def render_tab(content_type, items):
         else:
             st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
 
-    list_col, detail_col, schedule_col = st.columns([0.9, 3.4, 1.1],gap="medium")
+    list_col, detail_col = st.columns([1, 4.4], gap="medium")
 
     # Tracked by item_index (stable across regeneration) rather than item.id, because
     # regenerate_content_item() deletes the old row and inserts a new one with a new id -
@@ -316,41 +316,6 @@ def render_tab(content_type, items):
                 render_staged_detail(selected_item, content_type, data)
             else:
                 render_simple_detail(selected_item, content_type, data)
-
-    with schedule_col:
-        with st.container(border=True):
-            st.markdown("**Schedule**")
-            is_ready = (content_type not in STAGED_TYPES and selected_item.status == "approved") or \
-                       (content_type in STAGED_TYPES and selected_item.stage == "complete")
-
-            if not is_ready:
-                st.caption("Complete approval to enable scheduling.")
-            else:
-                existing_date = selected_item.scheduled_at.date() if selected_item.scheduled_at else date.today()
-                existing_time = selected_item.scheduled_at.time() if selected_item.scheduled_at else dtime(9, 0)
-                picked_date = st.date_input("Date", value=existing_date, key=f"sched_date_{selected_item.id}")
-                picked_time = st.time_input("Time", value=existing_time, key=f"sched_time_{selected_item.id}")
-
-                combo = (True, False, False)
-                if content_type in STAGED_TYPES:
-                    st.caption("Publish with:")
-                    preset = st.radio("Publish combination",
-                                       ["Post only", "Post + Hook", "Post + Image", "Post + Hook + Image"],
-                                       key=f"preset_{selected_item.id}", label_visibility="collapsed")
-                    combo = {
-                        "Post only": (True, False, False),
-                        "Post + Hook": (True, True, False),
-                        "Post + Image": (True, False, True),
-                        "Post + Hook + Image": (True, True, True),
-                    }[preset]
-
-                if st.button("Save schedule", type="primary", key=f"save_sched_{selected_item.id}"):
-                    scheduled_datetime = datetime.combine(picked_date, picked_time)
-                    update_content_item_schedule(selected_item.id, scheduled_datetime)
-                    if content_type in STAGED_TYPES:
-                        update_publish_flags(selected_item.id, *combo)
-                    st.success("Saved.")
-                    st.rerun()
 
 
 def render_staged_detail(item, content_type, data):
