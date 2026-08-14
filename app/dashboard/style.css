@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ==========================================================
    DESIGN TOKENS
@@ -119,8 +120,8 @@ hr.tight-divider{
 ========================================================== */
 
 section[data-testid="stSidebar"] {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
+    background: #0B1020;
+    border-right: 1px solid #1A2138;
 }
 
 section[data-testid="stSidebar"] .block-container {
@@ -134,31 +135,33 @@ section[data-testid="stSidebar"] .block-container {
 
 .sidebar-brand h2{
     margin: 0;
-    color: #1C1C28;
+    color: #F5F5FA;
     font-size: 18px;
-    font-weight: 800;
+    font-weight: 700;
+    font-family: 'DM Sans', 'Inter', sans-serif;
     letter-spacing: -0.01em;
     line-height: 1;
 }
 
 a[data-testid="stPageLink-NavLink"]{
+    font-family: 'DM Sans', 'Inter', sans-serif !important;
     font-size: 14.5px !important;
-    font-weight: 600 !important;
-    color: var(--text) !important;
+    font-weight: 500 !important;
+    color: #D6D9E8 !important;
     padding: 11px 14px !important;
-    border-radius: var(--radius-sm) !important;
+    border-radius: 10px !important;
     margin-bottom: 8px;
-    background: var(--bg) !important;
-    border: 1px solid var(--border-soft) !important;
+    background: #151B2E !important;
+    border: 1px solid #252D45 !important;
     border-left: 3px solid transparent !important;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
 }
 
 a[data-testid="stPageLink-NavLink"]:hover{
-    background: var(--brand-tint) !important;
-    color: var(--brand) !important;
-    border-color: #DEDAFF !important;
+    background: #1B2338 !important;
+    color: #C9BFFF !important;
+    border-color: #342B5C !important;
 }
 
 a[data-testid="stPageLink-NavLink"]:active{
@@ -170,11 +173,21 @@ a[data-testid="stPageLink-NavLink"]:active{
    "this is the active page" - Streamlit's internal active-state class is an
    unstable emotion hash, unsafe to select on. */
 a[data-testid="stPageLink-NavLink"][href=""]{
-    background: var(--brand-tint) !important;
-    color: var(--brand) !important;
-    border-color: #DEDAFF !important;
-    border-left: 3px solid var(--brand) !important;
-    box-shadow: var(--shadow);
+    background: #211B45 !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-color: #3B2F73 !important;
+    border-left: 3px solid #7C4DFF !important;
+    box-shadow: 0 0 0 1px rgba(124, 77, 255, 0.15), 0 4px 14px rgba(124, 77, 255, 0.28);
+}
+
+/* The label text sits inside nested <span>/<p> wrappers (e.g.
+   <span><div><p>App</p></div></span>), which would otherwise pick up the
+   global .stApp span/.stApp p dark text color (a direct match always beats
+   an inherited value, even an !important one on the ancestor) - so the
+   light color has to be forced on every descendant explicitly. */
+a[data-testid="stPageLink-NavLink"] *{
+    color: inherit !important;
 }
 
 a[data-testid="stPageLink-NavLink"] [data-testid="stIconEmoji"]{
