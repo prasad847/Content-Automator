@@ -81,10 +81,10 @@ h1, h2, h3, h4, h5, h6{
 .main .block-container {
     max-width: none !important;
     width: 100% !important;
-    padding-top: 1.25rem !important;
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
-    padding-bottom: 1.5rem !important;
+    padding-top: 1.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-bottom: 2rem !important;
 }
 
 section.main > div {
@@ -95,8 +95,12 @@ section.main > div {
 
 hr, div[data-testid="stDivider"]{
     border-color: var(--border) !important;
-    margin: 1.1rem 0 !important;
+    margin: 1.75rem 0 !important;
     opacity: 1 !important;
+}
+
+hr.tight-divider{
+    margin: 2px 0 10px 0 !important;
 }
 
 /* Thin, unobtrusive scrollbars */
@@ -120,30 +124,62 @@ section[data-testid="stSidebar"] {
 }
 
 section[data-testid="stSidebar"] .block-container {
-    padding-top: 1.25rem !important;
+    padding-top: 0 !important;
 }
 
-[data-testid="stSidebarNav"] a,
-section[data-testid="stSidebar"] nav a {
-    font-size: 15px !important;
+.sidebar-brand{
+    padding: 0 6px;
+    margin-bottom: 2px;
+}
+
+.sidebar-brand h2{
+    margin: 0;
+    color: #1C1C28;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1;
+}
+
+a[data-testid="stPageLink-NavLink"]{
+    font-size: 14.5px !important;
     font-weight: 600 !important;
-    color: var(--text-muted) !important;
-    padding: 12px 14px !important;
+    color: var(--text) !important;
+    padding: 11px 14px !important;
     border-radius: var(--radius-sm) !important;
-    margin-bottom: 4px;
-    transition: background 0.15s ease, color 0.15s ease;
+    margin-bottom: 8px;
+    background: var(--bg) !important;
+    border: 1px solid var(--border-soft) !important;
+    border-left: 3px solid transparent !important;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
 }
 
-[data-testid="stSidebarNav"] a:hover,
-section[data-testid="stSidebar"] nav a:hover {
+a[data-testid="stPageLink-NavLink"]:hover{
     background: var(--brand-tint) !important;
     color: var(--brand) !important;
+    border-color: #DEDAFF !important;
 }
 
-[data-testid="stSidebarNav"] a[aria-current="page"],
-section[data-testid="stSidebar"] nav a[aria-current="page"] {
+a[data-testid="stPageLink-NavLink"]:active{
+    transform: translateY(1px);
+}
+
+/* The currently-open page's own link resolves to an empty href (it already
+   points "here"), which is the one stable signal st.page_link exposes for
+   "this is the active page" - Streamlit's internal active-state class is an
+   unstable emotion hash, unsafe to select on. */
+a[data-testid="stPageLink-NavLink"][href=""]{
     background: var(--brand-tint) !important;
     color: var(--brand) !important;
+    border-color: #DEDAFF !important;
+    border-left: 3px solid var(--brand) !important;
+    box-shadow: var(--shadow);
+}
+
+a[data-testid="stPageLink-NavLink"] [data-testid="stIconEmoji"]{
+    font-size: 19px !important;
+    margin-left: 6px;
 }
 
 
@@ -159,17 +195,45 @@ div[data-testid="stVerticalBlockBorderWrapper"]{
     transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
+div[data-testid="stVerticalBlockBorderWrapper"]:hover{
+    box-shadow: var(--shadow);
+}
+
 
 /* ==========================================================
    TOP BOXES
 ========================================================== */
 
 div[class*="st-key-topbox-"]{
-    min-height: 150px;
+    min-height: 165px;
+    padding: 10px 16px !important;
+    gap: 8px !important;
+    box-shadow: var(--shadow);
 }
 
-div[class*="st-key-topbox-"] > div{
-    box-shadow: var(--shadow);
+div[class*="st-key-topbox-"] strong{
+    font-size: 16px;
+    font-weight: 600;
+}
+
+div[class*="st-key-topbox-"] [data-testid="stElementContainer"]:first-child p{
+    margin-bottom: 0 !important;
+}
+
+.char-counter{
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 2px;
+}
+
+
+/* ==========================================================
+   TRANSCRIPT + PDF ROW
+========================================================== */
+
+div[class*="st-key-transcript-pdf-row"] > div{
+    padding: 4px 10px;
 }
 
 
@@ -178,16 +242,52 @@ div[class*="st-key-topbox-"] > div{
 ========================================================== */
 
 [data-testid="stFileUploaderDropzone"]{
-    min-height: 42px !important;
-    padding: 6px !important;
-    background: var(--bg) !important;
-    border-radius: var(--radius-sm) !important;
-    border: 1px dashed var(--border) !important;
+    min-height: 86px !important;
+    padding: 8px 16px !important;
+    background: var(--brand-tint) !important;
+    border-radius: var(--radius) !important;
+    border: 1.5px dashed #C9C2F5 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    text-align: left !important;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover{
+    border-color: var(--brand) !important;
+    background: #EDE9FF !important;
 }
 
 [data-testid="stFileUploaderDropzoneInstructions"]{
-    font-size: 12px !important;
+    font-size: 12.5px !important;
     color: var(--text-muted) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] svg{
+    width: 22px !important;
+    height: 22px !important;
+    color: var(--brand) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button{
+    border-radius: var(--radius-pill) !important;
+    background: var(--brand) !important;
+    border-color: var(--brand) !important;
+    font-weight: 600 !important;
+    padding: 6px 16px !important;
+    margin-top: 6px !important;
+    transition: background 0.15s ease;
+}
+
+[data-testid="stFileUploaderDropzone"] button:hover{
+    background: var(--brand-hover) !important;
+    border-color: var(--brand-hover) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button *{
+    color: white !important;
 }
 
 
@@ -306,6 +406,51 @@ div[data-testid="stTabs"] .react-aria-SelectionIndicator{
     display: none;
 }
 
+/* Brand-mark icons for each platform tab. st.tabs() labels are plain text
+   (no HTML/SVG allowed), so the logo is layered on with ::before instead.
+   Position-based: content_types_present is always built from PLATFORM_META
+   in the fixed alphabetical DB order (facebook, linkedin, news_article,
+   reel_idea, x, youtube), confirmed against the live DOM. */
+div[data-testid="stTabs"] div[data-testid="stTab"]::before{
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(1)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='%231877F2'/><text x='8' y='11.8' font-family='Arial,sans-serif' font-weight='700' font-size='10' fill='white' text-anchor='middle'>f</text></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(2)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230A66C2'/><text x='8' y='11.3' font-family='Arial,sans-serif' font-weight='700' font-size='7.5' fill='white' text-anchor='middle'>in</text></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(3)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='1.3' width='11' height='13' rx='1.3' fill='none' stroke='%234B5563' stroke-width='1.3'/><line x1='4.3' y1='4.7' x2='10.7' y2='4.7' stroke='%234B5563' stroke-width='1.1'/><line x1='4.3' y1='7.7' x2='10.7' y2='7.7' stroke='%234B5563' stroke-width='1.1'/><line x1='4.3' y1='10.7' x2='8.7' y2='10.7' stroke='%234B5563' stroke-width='1.1'/></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(4)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='1' width='14' height='14' rx='4' fill='none' stroke='%23C13584' stroke-width='1.5'/><circle cx='8' cy='8' r='3.3' fill='none' stroke='%23C13584' stroke-width='1.5'/><circle cx='11.6' cy='4.4' r='1' fill='%23C13584'/></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(5)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23111111'/><text x='8' y='11.5' font-family='Arial,sans-serif' font-weight='700' font-size='9' fill='white' text-anchor='middle'>X</text></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(6)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='4' fill='%23FF0000'/><polygon points='6,4.5 12,8 6,11.5' fill='white'/></svg>");
+}
+
+div[data-testid="stTabs"] div[role="tablist"] > div[data-testid="stTab"]:nth-child(7)::before{
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='8' fill='%23000'/><text x='8' y='11.2' font-family='Arial,sans-serif' font-weight='700' font-size='9' fill='white' text-anchor='middle'>@</text></svg>");
+}
+
 
 /* ==========================================================
    TEXT INPUTS
@@ -320,6 +465,10 @@ div[data-baseweb="select"] > div{
     border-color: var(--border) !important;
     background: var(--surface) !important;
     font-size: 14px !important;
+}
+
+div[data-baseweb="select"] > div{
+    min-height: 44px !important;
 }
 
 .stTextArea textarea:focus,
@@ -372,9 +521,21 @@ div[data-testid="stAlertContentError"], div[data-testid="stAlert"]:has(div[data-
 .platform-banner{
     padding: 12px 18px;
     border-radius: var(--radius-sm);
-    margin-bottom: 14px;
+    margin-bottom: 20px;
     font-size: 17px;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.platform-banner-icon{
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.platform-banner-icon svg{
+    display: block;
 }
 
 
@@ -396,38 +557,52 @@ div[data-testid="stAlertContentError"], div[data-testid="stAlert"]:has(div[data-
 
 
 /* ==========================================================
+   POST LIST CARDS (small "Post N" cards in the left column)
+   Sized ~15% larger than the default bordered-container padding.
+========================================================== */
+
+div[class*="st-key-postcard-"]{
+    padding: 18px !important;
+}
+
+div[class*="st-key-postcard-"] .post-title{
+    font-size: 18px;
+}
+
+
+/* ==========================================================
    STATUS BADGES
 ========================================================== */
 
 .badge{
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.01em;
     text-transform: capitalize;
 }
 
-.badge-approved{
-    background: var(--green-tint);
-    color: var(--green-hover);
+.badge-dot{
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
-.badge-draft{
-    background: #EEEEF3;
-    color: var(--text-muted);
-}
+.badge-approved{ color: var(--green-hover); }
+.badge-approved .badge-dot{ background: var(--green); }
 
-.badge-review{
-    background: var(--brand-tint);
-    color: var(--brand);
-}
+.badge-draft{ color: var(--text-muted); }
+.badge-draft .badge-dot{ background: var(--text-faint); }
 
-.badge-complete{
-    background: var(--green-tint);
-    color: var(--green-hover);
-}
+.badge-review{ color: var(--brand); }
+.badge-review .badge-dot{ background: var(--brand); }
+
+.badge-complete{ color: var(--green-hover); }
+.badge-complete .badge-dot{ background: var(--green); }
 
 
 /* ==========================================================
@@ -645,107 +820,6 @@ div[class*="st-key-pillbtn-group-"] button:hover{
 
 
 /* ==========================================================
-   FACEBOOK POST PREVIEW CARD
-   A visual-only mockup of the real Facebook post, built from the
-   existing approved text/hook/image - not a live Facebook embed.
-========================================================== */
-
-.fb-preview-card{
-    background: var(--surface);
-    border: 1px solid #DADDE1;
-    border-radius: var(--radius);
-    max-width: 420px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    margin: 10px 0 18px 0;
-}
-
-.fb-preview-header{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px 8px 14px;
-}
-
-.fb-preview-avatar{
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--facebook);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 18px;
-    flex-shrink: 0;
-    text-transform: lowercase;
-}
-
-.fb-preview-meta{
-    flex: 1;
-    min-width: 0;
-}
-
-.fb-preview-name{
-    font-weight: 700;
-    font-size: 14.5px;
-    color: #050505;
-}
-
-.fb-preview-sub{
-    font-size: 12.5px;
-    color: #65676B;
-}
-
-.fb-preview-menu{
-    color: #65676B;
-    font-size: 16px;
-    letter-spacing: 1px;
-    padding: 4px 6px;
-}
-
-.fb-preview-text{
-    padding: 0 14px 10px 14px;
-    font-size: 14.5px;
-    color: #050505;
-    white-space: pre-wrap;
-    line-height: 1.4;
-}
-
-.fb-preview-image{
-    width: 100%;
-    display: block;
-    max-height: 420px;
-    object-fit: cover;
-}
-
-.fb-preview-stats{
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 14px;
-    font-size: 13px;
-    color: #65676B;
-    border-bottom: 1px solid #E4E6EB;
-}
-
-.fb-preview-actions{
-    display: flex;
-    padding: 4px 8px;
-}
-
-.fb-preview-action{
-    flex: 1;
-    text-align: center;
-    padding: 8px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #65676B;
-    border-radius: var(--radius-sm);
-}
-
-
-/* ==========================================================
    RADIO GROUPS (e.g. "Publish with")
 ========================================================== */
 
@@ -756,6 +830,48 @@ div[data-testid="stRadio"] > div[role="radiogroup"]{
 
 div[data-testid="stRadio"] label{
     font-size: 14px;
+}
+
+
+/* ==========================================================
+   RESPONSIVE (tablet / mobile)
+   Streamlit's own column stacking breakpoint is too narrow for this
+   layout, so stColumn rows are forced to stack earlier, and the
+   platform tab bar scrolls horizontally inside itself instead of
+   wrapping or forcing the whole page to scroll sideways.
+========================================================== */
+
+@media (max-width: 960px){
+    .main .block-container{
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    div[data-testid="stHorizontalBlock"]{
+        flex-direction: column !important;
+    }
+
+    div[data-testid="stColumn"]{
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+
+    div[class*="st-key-topbox-"]{
+        min-height: 0 !important;
+    }
+
+    div[data-testid="stTabs"] div[role="tablist"]{
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+    }
+
+    div[data-testid="stTabs"] div[data-testid="stTab"]{
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+    }
 }
 
 

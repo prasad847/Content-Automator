@@ -1,7 +1,6 @@
 import sys
 import os
 import json
-import base64
 import html as html_lib
 from datetime import datetime, date, time as dtime
 
@@ -49,19 +48,61 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 STAGED_TYPES = ("facebook_post", "linkedin_post", "x_post")
 
 PLATFORM_META = {
-    "facebook_post": {"label": "Facebook", "color": "#1877F2", "icon": "📘"},
-    "linkedin_post": {"label": "LinkedIn", "color": "#0A66C2", "icon": "💼"},
-    "x_post": {"label": "X (Twitter)", "color": "#111111", "icon": "✖️"},
-    "news_article": {"label": "News Article", "color": "#4B5563", "icon": "📰"},
-    "reel_idea": {"label": "Instagram Reels", "color": "#C13584", "icon": "📸"},
-    "youtube_idea": {"label": "YouTube", "color": "#FF0000", "icon": "▶️"},
+    "facebook_post": {
+        "label": "Facebook", "color": "#1877F2",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><circle cx='12' cy='12' r='12' fill='#1877F2'/>"
+               "<text x='12' y='17' font-family='Arial,sans-serif' font-weight='700' font-size='15' "
+               "fill='#fff' text-anchor='middle'>f</text></svg>",
+    },
+    "linkedin_post": {
+        "label": "LinkedIn", "color": "#0A66C2",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><rect width='24' height='24' rx='5' fill='#0A66C2'/>"
+               "<text x='12' y='16.5' font-family='Arial,sans-serif' font-weight='700' font-size='11' "
+               "fill='#fff' text-anchor='middle'>in</text></svg>",
+    },
+    "x_post": {
+        "label": "X (Twitter)", "color": "#111111",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><rect width='24' height='24' rx='5' fill='#111111'/>"
+               "<text x='12' y='17' font-family='Arial,sans-serif' font-weight='700' font-size='13' "
+               "fill='#fff' text-anchor='middle'>X</text></svg>",
+    },
+    "news_article": {
+        "label": "News Article", "color": "#4B5563",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><rect x='3' y='2' width='18' height='20' rx='2' "
+               "fill='none' stroke='#4B5563' stroke-width='2'/>"
+               "<line x1='7' y1='7' x2='17' y2='7' stroke='#4B5563' stroke-width='1.8'/>"
+               "<line x1='7' y1='12' x2='17' y2='12' stroke='#4B5563' stroke-width='1.8'/>"
+               "<line x1='7' y1='17' x2='13' y2='17' stroke='#4B5563' stroke-width='1.8'/></svg>",
+    },
+    "reel_idea": {
+        "label": "Instagram Reels", "color": "#C13584",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><rect x='2' y='2' width='20' height='20' rx='6' "
+               "fill='none' stroke='#C13584' stroke-width='2'/>"
+               "<circle cx='12' cy='12' r='5' fill='none' stroke='#C13584' stroke-width='2'/>"
+               "<circle cx='17.5' cy='6.5' r='1.4' fill='#C13584'/></svg>",
+    },
+    "youtube_idea": {
+        "label": "YouTube", "color": "#FF0000",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><rect x='1' y='4' width='22' height='16' rx='5' "
+               "fill='#FF0000'/><polygon points='10,8.5 17,12 10,15.5' fill='#fff'/></svg>",
+    },
+    "threads_post": {
+        "label": "Threads", "color": "#000000",
+        "svg": "<svg viewBox='0 0 24 24' width='22' height='22'><circle cx='12' cy='12' r='12' fill='#000'/>"
+               "<text x='12' y='16.5' font-family='Arial,sans-serif' font-weight='700' font-size='13' "
+               "fill='#fff' text-anchor='middle'>@</text></svg>",
+    },
 }
+
+# Threads has no generation backend yet - the tab is a visual placeholder only,
+# always appended last so it never shifts the position of the real platform tabs.
+PLACEHOLDER_CONTENT_TYPES = ("threads_post",)
 
 STAGE_STEPS = ["Post", "Hook", "Image", "Done"]
 
 
 def badge(text, kind):
-    return f'<span class="badge badge-{kind}">{text}</span>'
+    return f'<span class="badge badge-{kind}"><span class="badge-dot"></span>{text}</span>'
 
 
 def save_audio_locally(uploaded_file):
@@ -96,49 +137,6 @@ def render_stage_tracker(current_stage):
         )
 
     st.markdown(f'<div class="stepper-track">{"".join(steps_html)}</div>', unsafe_allow_html=True)
-
-
-def _image_to_data_uri(path):
-    """Inline a local image file as a base64 data URI, since the browser can't load a
-    filesystem path directly. Returns None if there's nothing to embed."""
-    if not path or not os.path.exists(path):
-        return None
-    ext = os.path.splitext(path)[1].lstrip(".").lower() or "png"
-    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
-    return f"data:image/{mime};base64,{b64}"
-
-
-def render_facebook_post_preview(post_text, image_path):
-    """Visual-only mockup of how this post will render on Facebook, built from the
-    existing approved post text and image - no live Facebook data involved."""
-    img_uri = _image_to_data_uri(image_path)
-    image_html = f'<img class="fb-preview-image" src="{img_uri}" />' if img_uri else ""
-
-    st.markdown(f"""
-    <div class="fb-preview-card">
-        <div class="fb-preview-header">
-            <div class="fb-preview-avatar">f</div>
-            <div class="fb-preview-meta">
-                <div class="fb-preview-name">Your Facebook Page</div>
-                <div class="fb-preview-sub">Just now &middot; 🌐</div>
-            </div>
-            <div class="fb-preview-menu">&#8226;&#8226;&#8226;</div>
-        </div>
-        <div class="fb-preview-text">{html_lib.escape(post_text)}</div>
-        {image_html}
-        <div class="fb-preview-stats">
-            <span>👍 ❤️ 24</span>
-            <span>3 comments &middot; 1 share</span>
-        </div>
-        <div class="fb-preview-actions">
-            <div class="fb-preview-action">👍&nbsp; Like</div>
-            <div class="fb-preview-action">💬&nbsp; Comment</div>
-            <div class="fb-preview-action">↪&nbsp; Share</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
 
 def render_accept_regenerate_edit(item_id, current_value, on_save, on_regenerate, on_accept,
@@ -195,8 +193,8 @@ jobs = get_all_jobs()
 job_labels = [f"Job #{job.id} — {job.file_name} ({job.status})" for job in jobs] if jobs else []
 
 col_upload, col_instructions, col_jobselect = st.columns(
-    [1.3, 2.2, 1.5],
-    gap="medium"
+    3,
+    gap="small"
 )
 
 with col_upload:
@@ -204,14 +202,16 @@ with col_upload:
         st.markdown("**🎙️ Content audio**")
         content_audio = st.file_uploader("Content audio", type=["mp3", "wav", "m4a"],
                                           key="content_audio", label_visibility="collapsed")
-        
+
 
 with col_instructions:
     with st.container(border=True, key="topbox-instructions"):
         st.markdown("**📝 Instructions**")
         instructions_text_input = st.text_area("Instructions", key="instructions_text_input",
-                                                height=90, label_visibility="collapsed",
+                                                height=68, label_visibility="collapsed",
                                                 placeholder="e.g. 3 educational, 2 motivational")
+        char_count = len(instructions_text_input) if instructions_text_input else 0
+        st.markdown(f"<div class='char-counter'>{char_count} / 500</div>", unsafe_allow_html=True)
 
 with col_jobselect:
     with st.container(border=True, key="topbox-job"):
@@ -267,28 +267,29 @@ if content_audio is not None:
 if not jobs:
     st.stop()
 
-st.divider()
+st.markdown("<hr class='tight-divider'>", unsafe_allow_html=True)
 
-# ============ Transcript + PDF button side by side ============
-col_transcript, col_pdf_btn = st.columns(
-    [7, 1],
-    gap="small"
-)
-with col_transcript:
-    with st.expander("View transcript"):
-        transcript_text = get_transcript_text(selected_job.id)
-        st.write(transcript_text if transcript_text else "No transcript yet.")
+# ============ Transcript + PDF button, grouped into a single row ============
+with st.container(border=True, key="transcript-pdf-row"):
+    col_transcript, col_pdf_btn = st.columns(
+        [7, 1],
+        gap="small"
+    )
+    with col_transcript:
+        with st.expander("View transcript"):
+            transcript_text = get_transcript_text(selected_job.id)
+            st.write(transcript_text if transcript_text else "No transcript yet.")
 
-with col_pdf_btn:
-    approved_items = get_approved_items(selected_job.id)
-    if approved_items:
-        pdf_bytes = generate_approved_content_pdf(selected_job, approved_items)
-        with st.container(key="pdf-download-btn"):
-            st.download_button(f"📄 PDF ({len(approved_items)})", data=pdf_bytes,
-                                file_name=f"job_{selected_job.id}_approved_content.pdf",
-                                mime="application/pdf", use_container_width=True)
-    else:
-        st.caption("No approved items yet")
+    with col_pdf_btn:
+        approved_items = get_approved_items(selected_job.id)
+        if approved_items:
+            pdf_bytes = generate_approved_content_pdf(selected_job, approved_items)
+            with st.container(key="pdf-download-btn"):
+                st.download_button(f"📄 PDF ({len(approved_items)})", data=pdf_bytes,
+                                    file_name=f"job_{selected_job.id}_approved_content.pdf",
+                                    mime="application/pdf", use_container_width=True)
+        else:
+            st.caption("No approved items yet")
 
 content_items = get_content_items(selected_job.id)
 if not content_items:
@@ -300,19 +301,33 @@ for item in content_items:
     items_by_type.setdefault(item.content_type, []).append(item)
 
 content_types_present = list(items_by_type.keys())
-tab_labels = [f"{PLATFORM_META.get(ct, {}).get('icon', '')} {PLATFORM_META.get(ct, {}).get('label', ct)}"
-              for ct in content_types_present]
+for placeholder_type in PLACEHOLDER_CONTENT_TYPES:
+    if placeholder_type not in content_types_present:
+        content_types_present.append(placeholder_type)
+
+# Native st.tabs labels can't render HTML/SVG, so tabs carry plain text here;
+# the matching brand-mark icon is layered in visually via CSS (see style.css).
+tab_labels = [PLATFORM_META.get(ct, {}).get('label', ct) for ct in content_types_present]
 tabs = st.tabs(tab_labels)
 transcript_text = get_transcript_text(selected_job.id)
 
 
-def render_tab(content_type, items):
-    meta = PLATFORM_META.get(content_type, {"label": content_type, "color": "#666666", "icon": "📄"})
+def render_platform_banner(content_type):
+    meta = PLATFORM_META.get(content_type, {"label": content_type, "color": "#666666", "svg": ""})
     st.markdown(
         f"<div class='platform-banner' style='background:{meta['color']}1A; color:{meta['color']};'>"
-        f"{meta['icon']} {meta['label']}</div>",
+        f"<span class='platform-banner-icon'>{meta['svg']}</span>{meta['label']}</div>",
         unsafe_allow_html=True
     )
+
+
+def render_coming_soon_tab(content_type):
+    render_platform_banner(content_type)
+    st.info("Threads support is coming soon.")
+
+
+def render_tab(content_type, items):
+    render_platform_banner(content_type)
 
     with st.container(key=f"platform-section-{content_type}"):
         if content_type == "facebook_post":
@@ -329,7 +344,7 @@ def render_tab(content_type, items):
             else:
                 st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
 
-        list_col, detail_col = st.columns([1, 4.4], gap="medium")
+        list_col, detail_col = st.columns([1.15, 4.25], gap="small")
 
         # Tracked by item_index (stable across regeneration) rather than item.id, because
         # regenerate_content_item() deletes the old row and inserts a new one with a new id -
@@ -341,7 +356,7 @@ def render_tab(content_type, items):
         with list_col:
             for item in items:
                 is_selected = st.session_state[selection_key] == item.item_index
-                with st.container(border=True):
+                with st.container(border=True, key=f"postcard-{item.id}"):
                     status_kind = "approved" if item.status == "approved" else "draft"
                     if content_type in STAGED_TYPES and item.stage == "complete":
                         status_kind = "complete"
@@ -553,22 +568,14 @@ def render_staged_detail(item, content_type, data):
             save_final_composition(item.id, item.final_image_path, want_hook_on_image)
             st.rerun()
 
-        is_facebook_preview = content_type == "facebook_post"
-
         if want_hook_on_image:
             if item.final_image_path:
-                if is_facebook_preview:
-                    render_facebook_post_preview(data.get("text", ""), item.final_image_path)
-                else:
-                    st.markdown("**Preview: hook on image**")
-                    st.image(item.final_image_path, width=320)
+                st.markdown("**Preview: hook on image**")
+                st.image(item.final_image_path, width=320)
             else:
                 st.info("Not composed yet. Generate a preview of the hook placed on the image below.")
                 if item.image_path:
-                    if is_facebook_preview:
-                        render_facebook_post_preview(data.get("text", ""), item.image_path)
-                    else:
-                        st.image(item.image_path, width=320)
+                    st.image(item.image_path, width=320)
 
             compose_instructions = st.text_area(
                 "Instructions for hook + image",
@@ -588,18 +595,12 @@ def render_staged_detail(item, content_type, data):
                         st.stop()
                 st.rerun()
         elif want_text_only:
-            if is_facebook_preview:
-                render_facebook_post_preview(data.get("text", ""), None)
-            else:
-                st.markdown("**Preview: post text only**")
-                st.caption("No hook or image will be published - only the post text.")
+            st.markdown("**Preview: post text only**")
+            st.caption("No hook or image will be published - only the post text.")
         else:
-            if is_facebook_preview:
-                render_facebook_post_preview(data.get("text", ""), item.image_path)
-            else:
-                st.markdown("**Preview: image only**")
-                if item.image_path:
-                    st.image(item.image_path, width=320)
+            st.markdown("**Preview: image only**")
+            if item.image_path:
+                st.image(item.image_path, width=320)
 
         st.divider()
         st.markdown("#### Final Approval")
@@ -774,4 +775,7 @@ def render_simple_detail(item, content_type, data):
 
 for tab, content_type in zip(tabs, content_types_present):
     with tab:
-        render_tab(content_type, items_by_type[content_type])
+        if content_type in PLACEHOLDER_CONTENT_TYPES:
+            render_coming_soon_tab(content_type)
+        else:
+            render_tab(content_type, items_by_type[content_type])

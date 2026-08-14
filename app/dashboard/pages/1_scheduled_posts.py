@@ -17,7 +17,7 @@ st.title("Scheduled Posts")
 items = get_scheduled_posts()
 
 if not items:
-    st.info("No approved, scheduled posts yet. Approve and schedule posts from the main Dashboard first.")
+    st.info("No approved, scheduled posts yet. Approve and schedule posts from the main App page first.")
     st.stop()
 
 jobs = {job.id: job.file_name for job in get_all_jobs()}
