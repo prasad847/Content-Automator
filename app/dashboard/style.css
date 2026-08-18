@@ -33,6 +33,7 @@
     --ink-hover: #111827;
 
     --red: #DC2626;
+    --red-hover: #B91C1C;
     --red-tint: #FDEDED;
     --amber: #D97706;
     --amber-tint: #FEF3E2;
@@ -570,16 +571,60 @@ div[data-testid="stAlertContentError"], div[data-testid="stAlert"]:has(div[data-
 
 
 /* ==========================================================
-   POST LIST CARDS (small "Post N" cards in the left column)
+   RESET BUTTON
+   Sits on the same top action row as the PDF download button, pinned to
+   the extreme right of that line (above the caption cards) instead of
+   living inside the detail card - styled like the PDF button (solid,
+   rounded-sm) but in red to signal a destructive action.
+========================================================== */
+
+div[class*="st-key-reset-btn-wrap-"]{
+    display: flex;
+    justify-content: flex-end;
+}
+
+div[class*="st-key-reset-btn-wrap-"] button,
+div[class*="st-key-reset-btn-wrap-"] button *{
+    color: white !important;
+}
+
+div[class*="st-key-reset-btn-wrap-"] button{
+    background: var(--red) !important;
+    border-color: var(--red) !important;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+
+div[class*="st-key-reset-btn-wrap-"] button:hover:not(:disabled){
+    background: var(--red-hover) !important;
+    border-color: var(--red-hover) !important;
+    box-shadow: var(--shadow-md);
+}
+
+
+/* ==========================================================
+   POST LIST CARDS (small "Caption N" cards in the left column)
    Sized ~15% larger than the default bordered-container padding.
 ========================================================== */
 
 div[class*="st-key-postcard-"]{
     padding: 18px !important;
+    position: relative;
+    cursor: pointer;
 }
 
 div[class*="st-key-postcard-"] .post-title{
     font-size: 18px;
+}
+
+/* Selected-tile highlight. A hidden marker span is rendered inside the
+   card only when it's the selected one, and :has() lets the outer
+   bordered wrapper react to it (same trick already used for the
+   sidebar's active-page link above). */
+div[class*="st-key-postcard-"]:has(.tile-selected-marker){
+    border-color: var(--brand) !important;
+    background: var(--brand-tint) !important;
+    box-shadow: 0 0 0 2px var(--brand-ring) !important;
 }
 
 
@@ -619,14 +664,36 @@ div[class*="st-key-postcard-"] .post-title{
 
 
 /* ==========================================================
-   SELECT BUTTON
+   TILE SELECT OVERLAY
+   Makes the whole caption card clickable: the wrapper is stretched to
+   cover the card exactly (postcard-* has position:relative above) and
+   the button inside it is made invisible, so any click on the card
+   body hits this button instead of a separate visible "Select" control.
 ========================================================== */
 
-div[class*="st-key-selectbtn"] button{
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    padding: 9px 0 !important;
-    border-radius: var(--radius-sm);
+div[class*="st-key-tilebtn-wrap-"]{
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    z-index: 2;
+}
+
+div[class*="st-key-tilebtn-wrap-"] .stButton{
+    height: 100%;
+}
+
+div[class*="st-key-tilebtn-wrap-"] button{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    opacity: 0;
+    box-shadow: none;
+    cursor: pointer;
 }
 
 

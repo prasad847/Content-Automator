@@ -330,57 +330,93 @@ def render_tab(content_type, items):
     render_platform_banner(content_type)
 
     with st.container(key=f"platform-section-{content_type}"):
-        if content_type == "facebook_post":
-            complete_items = [i for i in items if i.stage == "complete"]
-            if complete_items:
-                fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
-                with st.container(key="fb-pdf-download-btn"):
-                    st.download_button(
-                        f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
-                        data=fb_pdf_bytes,
-                        file_name=f"job_{selected_job.id}_facebook_posts.pdf",
-                        mime="application/pdf",
-                    )
-            else:
-                st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
-
-        list_col, detail_col = st.columns([1.15, 4.25], gap="small")
-
         # Tracked by item_index (stable across regeneration) rather than item.id, because
         # regenerate_content_item() deletes the old row and inserts a new one with a new id -
-        # tracking by id would silently snap the selection back to Post 1 on every regenerate.
+        # tracking by id would silently snap the selection back to Caption 1 on every regenerate.
         selection_key = f"selected_item_{content_type}"
         if selection_key not in st.session_state:
             st.session_state[selection_key] = items[0].item_index
+        selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
+
+        # Top action row - PDF export on the left, Reset (for the selected caption)
+        # pinned to the extreme right of the same line, both above the caption cards.
+        if content_type == "facebook_post" or content_type in STAGED_TYPES:
+            top_left, top_right = st.columns([5, 1], gap="small")
+            with top_left:
+                if content_type == "facebook_post":
+                    complete_items = [i for i in items if i.stage == "complete"]
+                    if complete_items:
+                        fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
+                        with st.container(key="fb-pdf-download-btn"):
+                            st.download_button(
+                                f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
+                                data=fb_pdf_bytes,
+                                file_name=f"job_{selected_job.id}_facebook_posts.pdf",
+                                mime="application/pdf",
+                            )
+                    else:
+                        st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
+            with top_right:
+                if content_type in STAGED_TYPES:
+                    reset_confirm_key = f"confirm_reset_{selected_item.id}"
+                    with st.container(key=f"reset-btn-wrap-{selected_item.id}"):
+                        if st.button("🔄 Reset", key=f"reset_btn_{selected_item.id}"):
+                            st.session_state[reset_confirm_key] = True
+                            st.rerun()
+
+            if content_type in STAGED_TYPES and st.session_state.get(f"confirm_reset_{selected_item.id}"):
+                st.warning(
+                    "This discards this post's current text, hook, and image, and generates a "
+                    "brand new post in its place. This cannot be undone. Continue?"
+                )
+                rc1, rc2 = st.columns(2)
+                with rc1:
+                    if st.button("Yes, reset this post", key=f"reset_yes_{selected_item.id}", type="primary",
+                                 use_container_width=True):
+                        with st.spinner("Generating a new post..."):
+                            new_content = regenerate_single_item(content_type, transcript_text)
+                            reset_and_regenerate_item(selected_item.id, new_content)
+                        st.session_state[f"confirm_reset_{selected_item.id}"] = False
+                        st.rerun()
+                with rc2:
+                    if st.button("Cancel", key=f"reset_cancel_{selected_item.id}", use_container_width=True):
+                        st.session_state[f"confirm_reset_{selected_item.id}"] = False
+                        st.rerun()
+
+        list_col, detail_col = st.columns([1.15, 4.25], gap="small")
 
         with list_col:
             for item in items:
                 is_selected = st.session_state[selection_key] == item.item_index
                 with st.container(border=True, key=f"postcard-{item.id}"):
+                    if is_selected:
+                        st.markdown("<span class='tile-selected-marker'></span>", unsafe_allow_html=True)
                     status_kind = "approved" if item.status == "approved" else "draft"
                     if content_type in STAGED_TYPES and item.stage == "complete":
                         status_kind = "complete"
                     st.markdown(
-                        f"<span class='post-title'>Post {item.item_index}</span> {badge(item.status, status_kind)}",
+                        f"<span class='post-title'>Caption {item.item_index}</span> {badge(item.status, status_kind)}",
                         unsafe_allow_html=True
                     )
                     if content_type in STAGED_TYPES:
                         st.caption(f"Stage: {item.stage}")
                     if item.scheduled_at:
                         st.caption(f"📅 {item.scheduled_at.strftime('%b %d, %I:%M %p')}")
-                    with st.container(key=f"selectbtn-wrap-{item.id}"):
-                        if st.button("Select", key=f"pick_{item.id}", type="primary" if is_selected else "secondary",
+                    # Invisible button absolutely positioned over the whole card (see
+                    # style.css "TILE SELECT OVERLAY") so a click anywhere on the tile
+                    # selects it, without a separate visible Select control.
+                    with st.container(key=f"tilebtn-wrap-{item.id}"):
+                        if st.button(f"Select Caption {item.item_index}", key=f"pick_{item.id}",
                                      use_container_width=True):
                             st.session_state[selection_key] = item.item_index
                             st.rerun()
 
-        selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
         data = json.loads(selected_item.content)
 
         with detail_col:
-            with st.container(border=True):
+            with st.container(border=True, key=f"detailcard-{selected_item.id}"):
                 st.markdown(
-                    f"<span class='post-title'>Post {selected_item.item_index}</span> "
+                    f"<span class='post-title'>Caption {selected_item.item_index}</span> "
                     f"<span class='post-version'>v{selected_item.version}</span>",
                     unsafe_allow_html=True
                 )
@@ -393,31 +429,6 @@ def render_tab(content_type, items):
 
 
 def render_staged_detail(item, content_type, data):
-    reset_confirm_key = f"confirm_reset_{item.id}"
-    if st.session_state.get(reset_confirm_key):
-        st.warning(
-            "This discards this post's current text, hook, and image, and generates a "
-            "brand new post in its place. This cannot be undone. Continue?"
-        )
-        rc1, rc2 = st.columns(2)
-        with rc1:
-            if st.button("Yes, reset this post", key=f"reset_yes_{item.id}", type="primary", use_container_width=True):
-                with st.spinner("Generating a new post..."):
-                    new_content = regenerate_single_item(content_type, transcript_text)
-                    reset_and_regenerate_item(item.id, new_content)
-                st.session_state[reset_confirm_key] = False
-                st.rerun()
-        with rc2:
-            if st.button("Cancel", key=f"reset_cancel_{item.id}", use_container_width=True):
-                st.session_state[reset_confirm_key] = False
-                st.rerun()
-    else:
-        with st.container(key=f"reset-btn-wrap-{item.id}"):
-            if st.button("🔄 Reset Post", key=f"reset_btn_{item.id}"):
-                st.session_state[reset_confirm_key] = True
-                st.rerun()
-    st.divider()
-
     if item.stage == "post":
         render_accept_regenerate_edit(
             item_id=f"post_{item.id}",
@@ -550,9 +561,8 @@ def render_staged_detail(item, content_type, data):
         if content_type != "facebook_post":
             st.text_area("Final post", value=data.get("text", ""), height=80, disabled=True, key=f"final_text_{item.id}")
             st.text_area("Final hook", value=item.hook_content or "", height=50, disabled=True, key=f"final_hook_{item.id}")
-        st.success("Hook and image both approved.")
+            st.divider()
 
-        st.divider()
         st.markdown("#### Publish with")
 
         publish_mode = st.radio(
@@ -570,12 +580,13 @@ def render_staged_detail(item, content_type, data):
 
         if want_hook_on_image:
             if item.final_image_path:
-                st.markdown("**Preview: hook on image**")
+                st.markdown("**Preview: hook on image + post**")
                 st.image(item.final_image_path, width=320)
             else:
                 st.info("Not composed yet. Generate a preview of the hook placed on the image below.")
                 if item.image_path:
                     st.image(item.image_path, width=320)
+            st.markdown(f"**Post:** {data.get('text', '')}")
 
             compose_instructions = st.text_area(
                 "Instructions for hook + image",
@@ -595,17 +606,16 @@ def render_staged_detail(item, content_type, data):
                         st.stop()
                 st.rerun()
         elif want_text_only:
-            st.markdown("**Preview: post text only**")
-            st.caption("No hook or image will be published - only the post text.")
+            st.markdown("**Preview: post only**")
+            st.markdown(f"**Post:** {data.get('text', '')}")
         else:
-            st.markdown("**Preview: image only**")
+            st.markdown("**Preview: image + post**")
             if item.image_path:
                 st.image(item.image_path, width=320)
+            st.markdown(f"**Post:** {data.get('text', '')}")
 
         st.divider()
         st.markdown("#### Final Approval")
-        st.markdown(f"**Hook:** {item.hook_content or '(none)'}")
-        st.markdown(f"**Post:** {data.get('text', '')}")
 
         publish_image = None if want_text_only else (
             item.final_image_path if (want_hook_on_image and item.final_image_path) else item.image_path

@@ -38,7 +38,7 @@ for item in items:
     with st.container(border=True):
         col1, col2, col3 = st.columns([2, 3, 2])
         with col1:
-            st.markdown(f"**{TYPE_LABELS.get(item.content_type, item.content_type)}** — Post {item.item_index}")
+            st.markdown(f"**{TYPE_LABELS.get(item.content_type, item.content_type)}** — Caption {item.item_index}")
             st.caption(f"From job #{item.job_id} — {jobs.get(item.job_id, 'unknown file')}")
         with col2:
             st.write(preview[:150] + ("..." if len(preview) > 150 else ""))
