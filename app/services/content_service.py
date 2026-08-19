@@ -127,13 +127,13 @@ def generate_news_article(transcript_text, instructions=None):
 
 def generate_reel_ideas(transcript_text, instructions=None):
     prompt = (
-        "Based on this transcript, generate exactly 5 Instagram Reel ideas. "
-        "Each needs: a hook (first 3 seconds), a complete script, a scene-by-scene "
-        "breakdown, a caption, and 8-10 hashtags."
+        "Based on this transcript, generate exactly 5 Instagram Reel ideas. The user will "
+        "take these and shoot the actual video themselves, so each needs only: a hook "
+        "(first 3 seconds, scroll-stopping) and a complete script for the full reel."
         + _instruction_note(instructions) +
         "\n\nTranscript:\n" + transcript_text + "\n\n"
         "Respond with ONLY this JSON structure:\n"
-        '{"reels": [{"hook": "...", "script": "...", "scene_breakdown": ["Scene 1: ...", "Scene 2: ..."], "caption": "...", "hashtags": ["#tag1", "#tag2"]}]}\n'
+        '{"reels": [{"hook": "...", "script": "..."}]}\n'
         '(Provide exactly 5 items in the "reels" array.)'
     )
     result = _call_model_with_retry(prompt)
@@ -142,13 +142,13 @@ def generate_reel_ideas(transcript_text, instructions=None):
 
 def generate_youtube_ideas(transcript_text, instructions=None):
     prompt = (
-        "Based on this transcript, generate exactly 5 YouTube video ideas. "
-        "Each needs: an SEO-optimized title, a thumbnail idea (visual description), a "
-        "complete script, a video description, and 8-10 tags."
+        "Based on this transcript, generate exactly 5 YouTube video ideas. The user will "
+        "take these and shoot the actual video themselves, so each needs only: an "
+        "SEO-optimized title and a complete script for the full video."
         + _instruction_note(instructions) +
         "\n\nTranscript:\n" + transcript_text + "\n\n"
         "Respond with ONLY this JSON structure:\n"
-        '{"videos": [{"seo_title": "...", "thumbnail_idea": "...", "script": "...", "description": "...", "tags": ["tag1", "tag2"]}]}\n'
+        '{"videos": [{"title": "...", "script": "..."}]}\n'
         '(Provide exactly 5 items in the "videos" array.)'
     )
     result = _call_model_with_retry(prompt)
@@ -196,18 +196,18 @@ def regenerate_single_item(content_type, transcript_text, previous_text=None, in
             '{"headline": "...", "body": "..."}'
         ),
         "reel_idea": (
-            "Based on this transcript, generate 1 Instagram Reel idea with a hook, "
-            "a complete script, a scene-by-scene breakdown, a caption, and 8-10 hashtags." + note +
+            "Based on this transcript, generate 1 Instagram Reel idea with a hook "
+            "and a complete script for the full reel." + note +
             "\n\nTranscript:\n" + transcript_text +
             "\n\nRespond with ONLY this JSON structure:\n"
-            '{"hook": "...", "script": "...", "scene_breakdown": ["Scene 1: ...", "Scene 2: ..."], "caption": "...", "hashtags": ["#tag1", "#tag2"]}'
+            '{"hook": "...", "script": "..."}'
         ),
         "youtube_idea": (
-            "Based on this transcript, generate 1 YouTube video idea with an SEO title, "
-            "a thumbnail idea, a complete script, a description, and 8-10 tags." + note +
+            "Based on this transcript, generate 1 YouTube video idea with an SEO title "
+            "and a complete script for the full video." + note +
             "\n\nTranscript:\n" + transcript_text +
             "\n\nRespond with ONLY this JSON structure:\n"
-            '{"seo_title": "...", "thumbnail_idea": "...", "script": "...", "description": "...", "tags": ["tag1", "tag2"]}'
+            '{"title": "...", "script": "..."}'
         ),
     }
 

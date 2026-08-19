@@ -43,16 +43,10 @@ def print_job_content(job_id):
             elif content_type == "reel_idea":
                 print(f"Hook: {data.get('hook')}")
                 print(f"Script: {data.get('script')}")
-                print(f"Scenes: {data.get('scene_breakdown')}")
-                print(f"Caption: {data.get('caption')}")
-                print(f"Hashtags: {' '.join(data.get('hashtags', []))}")
 
             elif content_type == "youtube_idea":
-                print(f"Title: {data.get('seo_title')}")
-                print(f"Thumbnail idea: {data.get('thumbnail_idea')}")
+                print(f"Title: {data.get('title') or data.get('seo_title')}")
                 print(f"Script: {data.get('script')}")
-                print(f"Description: {data.get('description')}")
-                print(f"Tags: {' '.join(data.get('tags', []))}")
 
 
 if __name__ == "__main__":

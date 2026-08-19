@@ -749,21 +749,17 @@ div[class*="st-key-edit-btn"] button:hover:not(:disabled){
 }
 
 div[class*="st-key-pdf-download-btn"] button,
-div[class*="st-key-pdf-download-btn"] button *,
-div[class*="st-key-fb-pdf-download-btn"] button,
-div[class*="st-key-fb-pdf-download-btn"] button *{
+div[class*="st-key-pdf-download-btn"] button *{
     color: white !important;
 }
-div[class*="st-key-pdf-download-btn"] button,
-div[class*="st-key-fb-pdf-download-btn"] button{
+div[class*="st-key-pdf-download-btn"] button{
     background: var(--ink) !important;
     border-color: var(--ink) !important;
     border-radius: var(--radius-sm);
     font-weight: 600;
 }
 
-div[class*="st-key-pdf-download-btn"] button:hover:not(:disabled),
-div[class*="st-key-fb-pdf-download-btn"] button:hover:not(:disabled){
+div[class*="st-key-pdf-download-btn"] button:hover:not(:disabled){
     background: var(--ink-hover) !important;
     border-color: var(--ink-hover) !important;
     box-shadow: var(--shadow-md);

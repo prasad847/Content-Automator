@@ -33,7 +33,8 @@ TYPE_LABELS = {
 
 for item in items:
     data = json.loads(item.content)
-    preview = data.get("text") or data.get("headline") or data.get("hook") or data.get("seo_title") or "(no preview)"
+    preview = (data.get("text") or data.get("headline") or data.get("hook")
+               or data.get("title") or data.get("seo_title") or "(no preview)")
 
     with st.container(border=True):
         col1, col2, col3 = st.columns([2, 3, 2])

@@ -20,7 +20,7 @@ from services.content_service import (
 )
 from services.image_service import generate_image
 from services.image_compose_service import compose_hook_on_image
-from services.pdf_service import generate_approved_content_pdf, generate_facebook_pdf
+from services.pdf_service import generate_approved_content_pdf, generate_staged_platform_pdf, TYPE_LABELS
 from services.publisher_service import publish_facebook_item
 from services.scheduler_service import start_scheduler
 from db import (
@@ -326,6 +326,46 @@ def render_coming_soon_tab(content_type):
     st.info("Threads support is coming soon.")
 
 
+def render_download_button(content_type, items):
+    """Per-tab Download button - same design/behavior as the original Facebook PDF button,
+    reused for every platform. Staged platforms (Facebook/LinkedIn/X) export the full
+    text+hook+image pipeline for posts that reached "complete"; the rest export whatever's
+    been approved, in whatever shape that content type stores (article, hook+script, etc.)."""
+    if content_type in STAGED_TYPES:
+        platform_label = TYPE_LABELS.get(content_type, content_type)
+        short_label = PLATFORM_META.get(content_type, {}).get("label", content_type)
+        complete_items = [i for i in items if i.stage == "complete"]
+        if complete_items:
+            pdf_bytes = generate_staged_platform_pdf(selected_job, complete_items, platform_label)
+            file_slug = "facebook_posts" if content_type == "facebook_post" else content_type
+            with st.container(key=f"pdf-download-btn-{content_type}"):
+                st.download_button(
+                    f"📄 Download {short_label} PDF ({len(complete_items)}) - posts, hooks & images",
+                    data=pdf_bytes,
+                    file_name=f"job_{selected_job.id}_{file_slug}.pdf",
+                    mime="application/pdf",
+                )
+        else:
+            st.caption(f"No fully approved {short_label} posts yet (post + hook + image) to export.")
+        return
+
+    label = PLATFORM_META.get(content_type, {}).get("label", content_type)
+    approved_items = [i for i in items if i.status == "approved"]
+    if not approved_items:
+        st.caption(f"No approved {label} items yet to export.")
+        return
+
+    pdf_bytes = generate_approved_content_pdf(selected_job, approved_items)
+    suffix = {"reel_idea": "hooks & scripts", "youtube_idea": "titles & scripts"}.get(content_type, "content")
+    with st.container(key=f"pdf-download-btn-{content_type}"):
+        st.download_button(
+            f"📄 Download {label} PDF ({len(approved_items)}) - {suffix}",
+            data=pdf_bytes,
+            file_name=f"job_{selected_job.id}_{content_type}.pdf",
+            mime="application/pdf",
+        )
+
+
 def render_tab(content_type, items):
     render_platform_banner(content_type)
 
@@ -338,50 +378,37 @@ def render_tab(content_type, items):
             st.session_state[selection_key] = items[0].item_index
         selected_item = next((i for i in items if i.item_index == st.session_state[selection_key]), items[0])
 
-        # Top action row - PDF export on the left, Reset (for the selected caption)
-        # pinned to the extreme right of the same line, both above the caption cards.
-        if content_type == "facebook_post" or content_type in STAGED_TYPES:
-            top_left, top_right = st.columns([5, 1], gap="small")
-            with top_left:
-                if content_type == "facebook_post":
-                    complete_items = [i for i in items if i.stage == "complete"]
-                    if complete_items:
-                        fb_pdf_bytes = generate_facebook_pdf(selected_job, complete_items)
-                        with st.container(key="fb-pdf-download-btn"):
-                            st.download_button(
-                                f"📄 Download Facebook PDF ({len(complete_items)}) - posts, hooks & images",
-                                data=fb_pdf_bytes,
-                                file_name=f"job_{selected_job.id}_facebook_posts.pdf",
-                                mime="application/pdf",
-                            )
-                    else:
-                        st.caption("No fully approved Facebook posts yet (post + hook + image) to export.")
-            with top_right:
-                if content_type in STAGED_TYPES:
-                    reset_confirm_key = f"confirm_reset_{selected_item.id}"
-                    with st.container(key=f"reset-btn-wrap-{selected_item.id}"):
-                        if st.button("🔄 Reset", key=f"reset_btn_{selected_item.id}"):
-                            st.session_state[reset_confirm_key] = True
-                            st.rerun()
+        # Top action row - PDF export on the left, Reset (for staged platforms, the selected
+        # caption) pinned to the extreme right of the same line, both above the caption cards.
+        top_left, top_right = st.columns([5, 1], gap="small")
+        with top_left:
+            render_download_button(content_type, items)
+        with top_right:
+            if content_type in STAGED_TYPES:
+                reset_confirm_key = f"confirm_reset_{selected_item.id}"
+                with st.container(key=f"reset-btn-wrap-{selected_item.id}"):
+                    if st.button("🔄 Reset", key=f"reset_btn_{selected_item.id}"):
+                        st.session_state[reset_confirm_key] = True
+                        st.rerun()
 
-            if content_type in STAGED_TYPES and st.session_state.get(f"confirm_reset_{selected_item.id}"):
-                st.warning(
-                    "This discards this post's current text, hook, and image, and generates a "
-                    "brand new post in its place. This cannot be undone. Continue?"
-                )
-                rc1, rc2 = st.columns(2)
-                with rc1:
-                    if st.button("Yes, reset this post", key=f"reset_yes_{selected_item.id}", type="primary",
-                                 use_container_width=True):
-                        with st.spinner("Generating a new post..."):
-                            new_content = regenerate_single_item(content_type, transcript_text)
-                            reset_and_regenerate_item(selected_item.id, new_content)
-                        st.session_state[f"confirm_reset_{selected_item.id}"] = False
-                        st.rerun()
-                with rc2:
-                    if st.button("Cancel", key=f"reset_cancel_{selected_item.id}", use_container_width=True):
-                        st.session_state[f"confirm_reset_{selected_item.id}"] = False
-                        st.rerun()
+        if content_type in STAGED_TYPES and st.session_state.get(f"confirm_reset_{selected_item.id}"):
+            st.warning(
+                "This discards this post's current text, hook, and image, and generates a "
+                "brand new post in its place. This cannot be undone. Continue?"
+            )
+            rc1, rc2 = st.columns(2)
+            with rc1:
+                if st.button("Yes, reset this post", key=f"reset_yes_{selected_item.id}", type="primary",
+                             use_container_width=True):
+                    with st.spinner("Generating a new post..."):
+                        new_content = regenerate_single_item(content_type, transcript_text)
+                        reset_and_regenerate_item(selected_item.id, new_content)
+                    st.session_state[f"confirm_reset_{selected_item.id}"] = False
+                    st.rerun()
+            with rc2:
+                if st.button("Cancel", key=f"reset_cancel_{selected_item.id}", use_container_width=True):
+                    st.session_state[f"confirm_reset_{selected_item.id}"] = False
+                    st.rerun()
 
         list_col, detail_col = st.columns([1.15, 4.25], gap="small")
 
@@ -718,7 +745,10 @@ def render_simple_detail(item, content_type, data):
     elif content_type == "reel_idea":
         preview = f"**Hook:** {data.get('hook', '')}\n\n**Script:** {data.get('script', '')}"
     elif content_type == "youtube_idea":
-        preview = f"**Title:** {data.get('seo_title', '')}\n\n**Script:** {data.get('script', '')}"
+        # Falls back to the older "seo_title" key for items generated before the
+        # schema was simplified down to just title + script.
+        title = data.get("title") or data.get("seo_title", "")
+        preview = f"**Title:** {title}\n\n**Script:** {data.get('script', '')}"
     else:
         preview = str(data)
 
@@ -752,26 +782,12 @@ def render_simple_detail(item, content_type, data):
             edited_data = {"headline": new_headline, "body": new_body}
         elif content_type == "reel_idea":
             new_hook = st.text_input("Hook", value=data.get("hook", ""), key=f"hook_{item.id}")
-            new_script = st.text_area("Script", value=data.get("script", ""), height=120, key=f"script_{item.id}")
-            new_scenes = st.text_area("Scene breakdown", value="\n".join(data.get("scene_breakdown", [])), height=100, key=f"scenes_{item.id}")
-            new_caption = st.text_area("Caption", value=data.get("caption", ""), height=60, key=f"caption_{item.id}")
-            new_hashtags = st.text_input("Hashtags", value=" ".join(data.get("hashtags", [])), key=f"hashtags_{item.id}")
-            edited_data = {
-                "hook": new_hook, "script": new_script,
-                "scene_breakdown": new_scenes.split("\n"),
-                "caption": new_caption, "hashtags": new_hashtags.split()
-            }
+            new_script = st.text_area("Script", value=data.get("script", ""), height=160, key=f"script_{item.id}")
+            edited_data = {"hook": new_hook, "script": new_script}
         elif content_type == "youtube_idea":
-            new_title = st.text_input("SEO Title", value=data.get("seo_title", ""), key=f"title_{item.id}")
-            new_thumb = st.text_area("Thumbnail idea", value=data.get("thumbnail_idea", ""), height=60, key=f"thumb_{item.id}")
-            new_script = st.text_area("Script", value=data.get("script", ""), height=120, key=f"yt_script_{item.id}")
-            new_desc = st.text_area("Description", value=data.get("description", ""), height=80, key=f"desc_{item.id}")
-            new_tags = st.text_input("Tags", value=" ".join(data.get("tags", [])), key=f"tags_{item.id}")
-            edited_data = {
-                "seo_title": new_title, "thumbnail_idea": new_thumb,
-                "script": new_script, "description": new_desc,
-                "tags": new_tags.split()
-            }
+            new_title = st.text_input("Title", value=data.get("title") or data.get("seo_title", ""), key=f"title_{item.id}")
+            new_script = st.text_area("Script", value=data.get("script", ""), height=160, key=f"yt_script_{item.id}")
+            edited_data = {"title": new_title, "script": new_script}
         else:
             edited_data = data
 
@@ -781,6 +797,38 @@ def render_simple_detail(item, content_type, data):
                 update_content_item_status(item.id, "approved")
                 st.session_state[editing_key] = False
                 st.rerun()
+
+    # News Article is the one "simple" type that still gets a schedule step, mirroring the
+    # Facebook/LinkedIn/X "Approve & Schedule" workflow - the actual external publish stays
+    # disabled until a News Article integration exists (services/scheduler_service.py already
+    # skips any content_type other than facebook_post when picking up due items).
+    if content_type == "news_article" and not st.session_state[editing_key] and item.status == "approved":
+        st.divider()
+        st.markdown("#### Schedule")
+
+        if item.final_status == "scheduled":
+            when_str = item.scheduled_at.strftime("%b %d, %Y at %I:%M %p") if item.scheduled_at else "an unset time"
+            st.info(f"📅 Scheduled - will be marked ready to publish on {when_str} once News Article "
+                    f"publishing is connected.")
+            with st.container(key=f"cancel-schedule-btn-{item.id}"):
+                if st.button("Cancel schedule", key=f"cancel_schedule_{item.id}"):
+                    cancel_schedule(item.id)
+                    st.rerun()
+        else:
+            st.caption("Publishing isn't connected yet for News Article - this only marks when it "
+                       "should go out once it is.")
+            sc1, sc2, sc3 = st.columns([2, 2, 1])
+            with sc1:
+                sched_date = st.date_input("Date", value=date.today(), min_value=date.today(),
+                                            key=f"news_sched_date_{item.id}")
+            with sc2:
+                sched_time = st.time_input("Time", value=dtime(9, 0), key=f"news_sched_time_{item.id}")
+            with sc3:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Schedule", key=f"news_schedule_btn_{item.id}", use_container_width=True):
+                    scheduled_dt = datetime.combine(sched_date, sched_time)
+                    approve_and_schedule(item.id, scheduled_dt)
+                    st.rerun()
 
 
 for tab, content_type in zip(tabs, content_types_present):

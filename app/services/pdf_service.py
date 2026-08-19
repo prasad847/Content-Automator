@@ -83,16 +83,13 @@ def generate_approved_content_pdf(job, items):
             elif content_type == "reel_idea":
                 _write_paragraph(pdf, f"Hook: {data.get('hook', '')}")
                 _write_paragraph(pdf, f"Script: {data.get('script', '')}")
-                _write_paragraph(pdf, "Scenes: " + " | ".join(data.get("scene_breakdown", [])))
-                _write_paragraph(pdf, f"Caption: {data.get('caption', '')}")
-                _write_paragraph(pdf, "Hashtags: " + " ".join(data.get("hashtags", [])))
 
             elif content_type == "youtube_idea":
-                _write_paragraph(pdf, f"Title: {data.get('seo_title', '')}")
-                _write_paragraph(pdf, f"Thumbnail idea: {data.get('thumbnail_idea', '')}")
+                # Falls back to the older "seo_title" key for items generated before
+                # the schema was simplified down to just title + script.
+                title = data.get("title") or data.get("seo_title", "")
+                _write_paragraph(pdf, f"Title: {title}")
                 _write_paragraph(pdf, f"Script: {data.get('script', '')}")
-                _write_paragraph(pdf, f"Description: {data.get('description', '')}")
-                _write_paragraph(pdf, "Tags: " + " ".join(data.get("tags", [])))
 
             pdf.ln(4)
 
@@ -101,16 +98,18 @@ def generate_approved_content_pdf(job, items):
     return bytes(pdf.output())
 
 
-def generate_facebook_pdf(job, items):
-    """Build a PDF of Facebook posts that have completed the full pipeline (post + hook +
-    image all approved), including each post's hook and final image. Returns raw PDF bytes."""
+def generate_staged_platform_pdf(job, items, platform_label):
+    """Build a PDF of posts (Facebook, LinkedIn, or X) that have completed the full pipeline
+    (post + hook + image all approved), including each post's hook and final image. Shared
+    across every staged platform since they all use the identical text/hook/image shape.
+    Returns raw PDF bytes."""
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_x(pdf.l_margin)
-    pdf.cell(0, 10, _clean(f"Approved Facebook Posts - {job.file_name}"), ln=True)
+    pdf.cell(0, 10, _clean(f"Approved {platform_label} - {job.file_name}"), ln=True)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_x(pdf.l_margin)
     pdf.cell(0, 8, _clean(f"Job #{job.id}"), ln=True)
