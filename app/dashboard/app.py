@@ -15,7 +15,7 @@ st.set_page_config(
 from services.transcription_service import transcribe_audio
 from services.content_service import (
     regenerate_single_item, generate_hook,
-    generate_facebook_posts, generate_linkedin_posts, generate_x_posts,
+    generate_facebook_posts, generate_linkedin_posts, generate_x_posts, generate_threads_posts,
     generate_news_article, generate_reel_ideas, generate_youtube_ideas
 )
 from services.image_service import generate_image
@@ -45,7 +45,28 @@ if os.path.exists(css_path):
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploaded_audio")
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
-STAGED_TYPES = ("facebook_post", "linkedin_post", "x_post")
+STAGED_TYPES = ("facebook_post", "linkedin_post", "x_post", "threads_post")
+
+# One generator per platform, keyed by content_type - used both to generate every
+# platform's content on a fresh upload, and to backfill a single platform later for a
+# job that predates it (see CONTENT_GENERATORS.items() below and render_generate_backfill_tab).
+CONTENT_GENERATORS = {
+    "facebook_post": generate_facebook_posts,
+    "linkedin_post": generate_linkedin_posts,
+    "x_post": generate_x_posts,
+    "threads_post": generate_threads_posts,
+    "news_article": generate_news_article,
+    "reel_idea": generate_reel_ideas,
+    "youtube_idea": generate_youtube_ideas,
+}
+
+# Fixed display order for platform tabs, independent of DB/query ordering - the tab
+# bar's brand-mark icons (see style.css "PLATFORM TABS") are positioned by nth-child,
+# so this order must stay in sync with those icon rules.
+PLATFORM_ORDER = (
+    "facebook_post", "linkedin_post", "news_article",
+    "reel_idea", "x_post", "youtube_idea", "threads_post",
+)
 
 PLATFORM_META = {
     "facebook_post": {
@@ -93,10 +114,6 @@ PLATFORM_META = {
                "fill='#fff' text-anchor='middle'>@</text></svg>",
     },
 }
-
-# Threads has no generation backend yet - the tab is a visual placeholder only,
-# always appended last so it never shifts the position of the real platform tabs.
-PLACEHOLDER_CONTENT_TYPES = ("threads_post",)
 
 STAGE_STEPS = ["Post", "Hook", "Image", "Done"]
 
@@ -242,23 +259,15 @@ if content_audio is not None:
                 st.stop()
 
         update_job_status(job.id, "generating")
-        content_generators = [
-            ("facebook_post", generate_facebook_posts),
-            ("linkedin_post", generate_linkedin_posts),
-            ("x_post", generate_x_posts),
-            ("news_article", generate_news_article),
-            ("reel_idea", generate_reel_ideas),
-            ("youtube_idea", generate_youtube_ideas),
-        ]
         progress = st.progress(0)
-        for i, (content_type, generator_function) in enumerate(content_generators):
+        for i, (content_type, generator_function) in enumerate(CONTENT_GENERATORS.items()):
             try:
                 result = generator_function(text, instructions=instructions_text)
                 save_content_items(job.id, content_type, result)
                 log_event(job.id, content_type, "success")
             except Exception as e:
                 log_event(job.id, content_type, "failed", str(e))
-            progress.progress((i + 1) / len(content_generators))
+            progress.progress((i + 1) / len(CONTENT_GENERATORS))
 
         update_job_status(job.id, "awaiting_approval")
         st.success(f"Job #{job.id} complete! Select it above to review.")
@@ -300,10 +309,11 @@ items_by_type = {}
 for item in content_items:
     items_by_type.setdefault(item.content_type, []).append(item)
 
-content_types_present = list(items_by_type.keys())
-for placeholder_type in PLACEHOLDER_CONTENT_TYPES:
-    if placeholder_type not in content_types_present:
-        content_types_present.append(placeholder_type)
+# Always show every platform tab in its fixed order, whether or not this particular job
+# has generated that platform's content yet (e.g. a job created before a new platform,
+# like Threads, was added) - a missing one renders as an on-demand "generate" prompt
+# instead of disappearing (see render_generate_backfill_tab below).
+content_types_present = list(PLATFORM_ORDER)
 
 # Native st.tabs labels can't render HTML/SVG, so tabs carry plain text here;
 # the matching brand-mark icon is layered in visually via CSS (see style.css).
@@ -321,9 +331,26 @@ def render_platform_banner(content_type):
     )
 
 
-def render_coming_soon_tab(content_type):
+def render_generate_backfill_tab(content_type, job_id):
+    """Shown for a platform tab this job hasn't generated content for yet - typically a
+    job created before that platform was added (e.g. Threads). Backfills just this one
+    platform on demand instead of requiring the whole audio file to be reprocessed."""
     render_platform_banner(content_type)
-    st.info("Threads support is coming soon.")
+    label = PLATFORM_META.get(content_type, {}).get("label", content_type)
+    st.info(f"No {label} content generated yet for this job.")
+    if st.button(f"⚡ Generate {label} posts", key=f"backfill_{content_type}_{job_id}"):
+        with st.spinner(f"Generating {label} posts..."):
+            try:
+                result = CONTENT_GENERATORS[content_type](transcript_text)
+                save_content_items(job_id, content_type, result)
+                log_event(job_id, content_type, "success")
+            except Exception as e:
+                log_event(job_id, content_type, "failed", str(e))
+                st.error(f"{label} generation failed. Try again.")
+                with st.expander("Technical details"):
+                    st.code(str(e))
+                st.stop()
+        st.rerun()
 
 
 def render_download_button(content_type, items):
@@ -833,7 +860,7 @@ def render_simple_detail(item, content_type, data):
 
 for tab, content_type in zip(tabs, content_types_present):
     with tab:
-        if content_type in PLACEHOLDER_CONTENT_TYPES:
-            render_coming_soon_tab(content_type)
+        if content_type not in items_by_type:
+            render_generate_backfill_tab(content_type, selected_job.id)
         else:
             render_tab(content_type, items_by_type[content_type])

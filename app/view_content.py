@@ -10,6 +10,7 @@ TYPE_LABELS = {
     "facebook_post": "FACEBOOK POSTS",
     "linkedin_post": "LINKEDIN POSTS",
     "x_post": "X (TWITTER) POSTS",
+    "threads_post": "THREADS POSTS",
     "news_article": "NEWS ARTICLE",
     "reel_idea": "INSTAGRAM REEL IDEAS",
     "youtube_idea": "YOUTUBE VIDEO IDEAS",
@@ -37,7 +38,7 @@ def print_job_content(job_id):
                 print(f"HEADLINE: {data.get('headline')}\n")
                 print(data.get("body"))
 
-            elif content_type in ("facebook_post", "linkedin_post", "x_post"):
+            elif content_type in ("facebook_post", "linkedin_post", "x_post", "threads_post"):
                 print(data.get("text"))
 
             elif content_type == "reel_idea":

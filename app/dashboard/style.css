@@ -422,9 +422,9 @@ div[data-testid="stTabs"] .react-aria-SelectionIndicator{
 
 /* Brand-mark icons for each platform tab. st.tabs() labels are plain text
    (no HTML/SVG allowed), so the logo is layered on with ::before instead.
-   Position-based: content_types_present is always built from PLATFORM_META
-   in the fixed alphabetical DB order (facebook, linkedin, news_article,
-   reel_idea, x, youtube), confirmed against the live DOM. */
+   Position-based: content_types_present always follows app.py's PLATFORM_ORDER
+   (facebook, linkedin, news_article, reel_idea, x, youtube, threads) - keep
+   these nth-child rules in sync with that constant if it ever changes. */
 div[data-testid="stTabs"] div[data-testid="stTab"]::before{
     content: "";
     display: inline-block;

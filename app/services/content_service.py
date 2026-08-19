@@ -112,6 +112,24 @@ def generate_x_posts(transcript_text, instructions=None):
     return result.get("posts", [])
 
 
+def generate_threads_posts(transcript_text, instructions=None):
+    prompt = (
+        "Based on this transcript, write 5 completely distinct Threads posts. "
+        "Each MUST use a different style - for example: "
+        "1) a bold one-liner, 2) a short numbered-list style insight, "
+        "3) a question that invites replies, 4) a relatable, conversational take, "
+        "5) a quick behind-the-scenes note from the talk. "
+        "Do not reuse the same opening words or structure across posts. "
+        "Each under 500 characters, casual and conversational."
+        + _instruction_note(instructions) +
+        "\n\nTranscript:\n" + transcript_text + "\n\n"
+        "Respond with ONLY this JSON structure:\n"
+        '{"posts": [{"text": "..."}, {"text": "..."}, {"text": "..."}, {"text": "..."}, {"text": "..."}]}'
+    )
+    result = _call_model_with_retry(prompt)
+    return result.get("posts", [])
+
+
 def generate_news_article(transcript_text, instructions=None):
     prompt = (
         "Based on this transcript, write 1 news-style article summarizing "
@@ -184,6 +202,13 @@ def regenerate_single_item(content_type, transcript_text, previous_text=None, in
         "x_post": (
             "Based on this transcript, write 1 X (Twitter) post. "
             "Under 280 characters, punchy, one specific idea." + note +
+            "\n\nTranscript:\n" + transcript_text +
+            "\n\nRespond with ONLY this JSON structure:\n"
+            '{"text": "..."}'
+        ),
+        "threads_post": (
+            "Based on this transcript, write 1 Threads post. "
+            "Casual, conversational tone, under 500 characters, one specific idea." + note +
             "\n\nTranscript:\n" + transcript_text +
             "\n\nRespond with ONLY this JSON structure:\n"
             '{"text": "..."}'

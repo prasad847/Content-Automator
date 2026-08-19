@@ -26,6 +26,7 @@ TYPE_LABELS = {
     "facebook_post": "Facebook",
     "linkedin_post": "LinkedIn",
     "x_post": "X (Twitter)",
+    "threads_post": "Threads",
     "news_article": "News Article",
     "reel_idea": "Instagram Reel",
     "youtube_idea": "YouTube",

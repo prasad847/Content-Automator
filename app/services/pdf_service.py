@@ -6,6 +6,7 @@ TYPE_LABELS = {
     "facebook_post": "Facebook Posts",
     "linkedin_post": "LinkedIn Posts",
     "x_post": "X (Twitter) Posts",
+    "threads_post": "Threads Posts",
     "news_article": "News Article",
     "reel_idea": "Instagram Reel Ideas",
     "youtube_idea": "YouTube Video Ideas",
@@ -77,7 +78,7 @@ def generate_approved_content_pdf(job, items):
                 pdf.set_font("Helvetica", "", 10)
                 _write_paragraph(pdf, data.get("body", ""))
 
-            elif content_type in ("facebook_post", "linkedin_post", "x_post"):
+            elif content_type in ("facebook_post", "linkedin_post", "x_post", "threads_post"):
                 _write_paragraph(pdf, data.get("text", ""))
 
             elif content_type == "reel_idea":

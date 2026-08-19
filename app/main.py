@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from services.drive_service import list_new_audio_files, download_file, save_processed_id
 from services.content_service import (
-    generate_facebook_posts, generate_linkedin_posts, generate_x_posts,
+    generate_facebook_posts, generate_linkedin_posts, generate_x_posts, generate_threads_posts,
     generate_news_article, generate_reel_ideas, generate_youtube_ideas
 )
 from db import create_job, save_transcript, save_content_items, update_job_status, log_event
@@ -58,6 +58,7 @@ def main():
             ("facebook_post", generate_facebook_posts),
             ("linkedin_post", generate_linkedin_posts),
             ("x_post", generate_x_posts),
+            ("threads_post", generate_threads_posts),
             ("news_article", generate_news_article),
             ("reel_idea", generate_reel_ideas),
             ("youtube_idea", generate_youtube_ideas),
